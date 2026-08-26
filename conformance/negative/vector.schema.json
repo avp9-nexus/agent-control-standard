@@ -29,7 +29,7 @@
             "required": ["verdict"],
             "properties": {
               "verdict": { "enum": ["PASS", "REJECT", "UNMEASURABLE"] },
-              "code": { "enum": ["CONTEXT_NOT_SUPPORTED", "REPLAY_CONSUMED", "STALE_DECISION", "PRINCIPAL_MISMATCH", "REFERENCE_MISSING", "REFERENCE_MISMATCH", "MALFORMED_EVIDENCE", "ORACLE_UNAVAILABLE"] },
+              "code": { "enum": ["CONTEXT_NOT_SUPPORTED", "REPLAY_CONSUMED", "STALE_DECISION", "PRINCIPAL_MISMATCH", "REFERENCE_MISSING", "REFERENCE_MISMATCH", "MALFORMED_EVIDENCE", "ORACLE_UNAVAILABLE", "MANDATE_REVOKED", "REVOCATION_UNCHECKABLE"] },
               "reason_must_mention": { "type": "array", "items": { "type": "string" } }
             }
           },

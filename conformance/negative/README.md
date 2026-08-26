@@ -42,6 +42,13 @@ Contributions from implementations that exercise revocation are the way to close
 | `REFERENCE_MISMATCH` | REJECT | The named reference diverges from the one already bound to this action's context |
 | `MALFORMED_EVIDENCE` | UNMEASURABLE | Evidence present but not decodable to the declared shape; consumers must fail closed |
 | `ORACLE_UNAVAILABLE` | UNMEASURABLE | The state needed to judge could not be read; absence of measurement is never a pass |
+| `MANDATE_REVOKED` | REJECT | The withdrawal was read and found: the authorization was valid when written and has since been withdrawn by its issuer |
+| `REVOCATION_UNCHECKABLE` | UNMEASURABLE | The withdrawal state could not be read, or could not be attributed to what is being presented |
+
+`STALE_DECISION` cannot carry either of the last two. A revoked mandate inside its
+freshness bound is not old, and reporting it stale sends an operator to look at clocks.
+That is rule 1 applied to a second axis: measured-and-wrong and could-not-measure stay
+apart, and so do old and withdrawn.
 
 ## Vector schema
 
