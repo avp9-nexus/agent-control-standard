@@ -88,6 +88,9 @@ wrong class of attack.
 
 ```
 python conformance/negative/runner.py --adapter your_adapter.py
+python conformance/negative/runner.py \
+    --adapter conformance/negative/revocation_adapter.py \
+    --vectors conformance/negative/vectors/revocation_vectors.json
 ```
 
 The adapter exposes `evaluate(vector) -> {"verdict": ..., "code": ..., "reason": ...,
