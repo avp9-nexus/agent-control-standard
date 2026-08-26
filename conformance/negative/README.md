@@ -24,11 +24,15 @@ the whole suite if any category lacks its positive control.
 evidence, and the state the enforcement point can consult. It never references a specific
 implementation. Each implementation provides one adapter (see `runner.py`).
 
-**4. Declared gaps are part of the suite.** Category 3 (expired or revoked mandates) is
-covered here for expiry only. Revocation vectors are absent because the contributing
-implementation has no revocation mechanism, by documented decision, and vectors for a path
-never exercised in production would be design fiction. The gap is stated rather than filled.
-Contributions from implementations that exercise revocation are the way to close it.
+**4. Declared gaps are part of the suite.** Category 3 (expired or revoked mandates) was
+covered for expiry only, because the contributing implementation has no revocation
+mechanism and vectors for a path never exercised in production would be design fiction.
+The gap was stated rather than filled, and contributions from implementations that
+exercise revocation were named as the way to close it. `vectors/revocation_vectors.json`
+closes it: five negative vectors and two positive controls covering withdrawal inside the
+freshness window, an unreachable registry, a registry stale beyond its own declared
+publication interval, a back-dated revocation window, and a re-issued mandate naming no
+predecessor.
 
 ## Failure codes (proposed enumeration)
 
@@ -52,8 +56,10 @@ apart, and so do old and withdrawn.
 
 ## Vector schema
 
-All eighteen vectors live as a single array in `vectors/negative_vectors.json`; the schema
-below describes one entry.
+The eighteen core vectors live as a single array in `vectors/negative_vectors.json`, and the
+seven revocation vectors in `vectors/revocation_vectors.json`. Both files share the schema in
+`vector.schema.json`, and each is run against the adapter that implements the layer it covers;
+the schema below describes one entry.
 
 ```json
 {
