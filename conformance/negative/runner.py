@@ -86,15 +86,14 @@ def main() -> int:
             continue
         # code and reason are compared on PASS vectors too (review 4996153628: a positive
         # control's code field previously went uncompared).
-        if True:
-            if out.get("code") != exp.get("code"):
-                failures.append((v["id"], f"code {out.get('code')!r} != expected {exp.get('code')!r}"))
-                continue
-            reason = (out.get("reason") or "").lower()
-            for needle in exp.get("reason_must_mention", []):
-                if needle.lower() not in reason:
-                    failures.append((v["id"], f"reason does not mention {needle!r}: {reason[:120]!r}"))
-                    break
+        if out.get("code") != exp.get("code"):
+            failures.append((v["id"], f"code {out.get('code')!r} != expected {exp.get('code')!r}"))
+            continue
+        reason = (out.get("reason") or "").lower()
+        for needle in exp.get("reason_must_mention", []):
+            if needle.lower() not in reason:
+                failures.append((v["id"], f"reason does not mention {needle!r}: {reason[:120]!r}"))
+                break
 
     for c, k in sorted(entry_points.items()):
         if k["pos"] and k["neg"] and k["pos"] != k["neg"]:
