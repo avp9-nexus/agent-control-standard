@@ -42,6 +42,13 @@ def load_adapter(path: Path):
     return mod
 
 
+def is_positive_control(vector) -> bool:
+    # A declared flag is not a positive control; only an expected PASS is (review 4996153628:
+    # a must-reject vector flagged positive_control satisfied the gate with zero must-pass inputs).
+    # One definition, so that every site deciding which vectors are the controls decides alike.
+    return bool(vector.get("positive_control")) and vector["expected"]["verdict"] == "PASS"
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--adapter", required=True, type=Path)
@@ -55,10 +62,7 @@ def main() -> int:
     # Structural gate first: every category present must carry a positive control.
     cats = defaultdict(lambda: {"neg": 0, "pos": 0})
     for v in vectors:
-        # A declared flag is not a positive control; only an expected PASS is (review 4996153628:
-        # a must-reject vector flagged positive_control satisfied the gate with zero must-pass inputs).
-        is_pos = v.get("positive_control") and v["expected"]["verdict"] == "PASS"
-        cats[v["category"]]["pos" if is_pos else "neg"] += 1
+        cats[v["category"]]["pos" if is_positive_control(v) else "neg"] += 1
     missing = [c for c, k in sorted(cats.items()) if k["pos"] == 0]
     if missing:
         print(f"SUITE INVALID: categories without a positive control: {missing}")
@@ -80,21 +84,20 @@ def main() -> int:
         if not ep:
             failures.append((v["id"], "adapter reported no entry_point - cannot tell the enforcement layer from a test double"))
             continue
-        entry_points[v["category"]]["pos" if v.get("positive_control") else "neg"].add(ep)
+        entry_points[v["category"]]["pos" if is_positive_control(v) else "neg"].add(ep)
         if out.get("verdict") != exp["verdict"]:
             failures.append((v["id"], f"verdict {out.get('verdict')!r} != expected {exp['verdict']!r}"))
             continue
         # code and reason are compared on PASS vectors too (review 4996153628: a positive
         # control's code field previously went uncompared).
-        if True:
-            if out.get("code") != exp.get("code"):
-                failures.append((v["id"], f"code {out.get('code')!r} != expected {exp.get('code')!r}"))
-                continue
-            reason = (out.get("reason") or "").lower()
-            for needle in exp.get("reason_must_mention", []):
-                if needle.lower() not in reason:
-                    failures.append((v["id"], f"reason does not mention {needle!r}: {reason[:120]!r}"))
-                    break
+        if out.get("code") != exp.get("code"):
+            failures.append((v["id"], f"code {out.get('code')!r} != expected {exp.get('code')!r}"))
+            continue
+        reason = (out.get("reason") or "").lower()
+        for needle in exp.get("reason_must_mention", []):
+            if needle.lower() not in reason:
+                failures.append((v["id"], f"reason does not mention {needle!r}: {reason[:120]!r}"))
+                break
 
     for c, k in sorted(entry_points.items()):
         if k["pos"] and k["neg"] and k["pos"] != k["neg"]:
