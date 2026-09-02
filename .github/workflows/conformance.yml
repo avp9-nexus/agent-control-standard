@@ -1,0 +1,131 @@
+# Runs the negative conformance suites on every pull request and on any push
+# that touches them. Without this, the vectors are documentation: nothing
+# executes them at merge time, so a suite can rot for months and still look
+# healthy in review.
+name: Conformance
+
+on:
+  pull_request:
+  push:
+    paths:
+      - 'conformance/**'
+      - '.github/workflows/conformance.yml'
+    branches: ["main"]
+  workflow_dispatch:
+
+# Deny by default. The one job below grants itself only what it needs.
+permissions: {}
+
+# Only the newest commit on a branch needs a verdict; an older run of the same
+# branch is answering a question nobody is asking any more.
+concurrency:
+  group: conformance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  negative-vectors:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      # Pinned so that a future release of the validator cannot turn a green
+      # history red without anyone changing a vector.
+      VALIDATOR: "check-jsonschema==0.35.0"
+      PYTHON_VERSION: "3.12"
+      SCHEMA: conformance/negative/vector.schema.json
+      CORE_VECTORS: conformance/negative/vectors/negative_vectors.json
+      CORE_ADAPTER: conformance/negative/reference_adapter.py
+      REVOCATION_VECTORS: conformance/negative/vectors/revocation_vectors.json
+      REVOCATION_ADAPTER: conformance/negative/revocation_adapter.py
+      RUNNER: conformance/negative/runner.py
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.9.9"
+
+      # A vector that has drifted out of its own schema should fail the build
+      # rather than the reviewer, who cannot see a missing field by reading a
+      # diff. Both suites share one schema, so both are checked against it.
+      - name: Validate the vector files against the vector schema
+        run: |
+          set -euo pipefail
+          uv run --python "$PYTHON_VERSION" --no-project --with "$VALIDATOR" \
+            check-jsonschema --schemafile "$SCHEMA" \
+            "$CORE_VECTORS" "$REVOCATION_VECTORS"
+
+      # The eighteen core vectors, every one of them. A count short of the full
+      # suite means a vector was silently dropped, which reads in a diff exactly
+      # like a vector that was never there.
+      - name: Run the core suite against the reference adapter
+        run: |
+          set -euo pipefail
+          LOG="$(mktemp)"
+          # The exit code is captured rather than allowed to abort the step, so
+          # that the runner's per-vector failure lines still reach the job log.
+          # A red step that printed nothing tells a maintainer only that
+          # something broke. Nothing here decides anything from the absence of
+          # output; the captured code alone decides, and it is re-raised below.
+          rc=0
+          uv run --python "$PYTHON_VERSION" --no-project \
+            "$RUNNER" --adapter "$CORE_ADAPTER" --vectors "$CORE_VECTORS" \
+            > "$LOG" 2>&1 || rc=$?
+          cat "$LOG"
+          if [ "$rc" -ne 0 ]; then
+            exit "$rc"
+          fi
+          grep -q '^18/18 vectors conform' "$LOG"
+
+      # The seven revocation vectors, run against the adapter that implements
+      # the revocation path. They are a separate suite because they exercise a
+      # layer the core adapter does not have.
+      - name: Run the revocation suite against the revocation adapter
+        run: |
+          set -euo pipefail
+          LOG="$(mktemp)"
+          # Same reason as the step above: keep the runner's own diagnosis
+          # visible, then re-raise its exit code unchanged.
+          rc=0
+          uv run --python "$PYTHON_VERSION" --no-project \
+            "$RUNNER" --adapter "$REVOCATION_ADAPTER" --vectors "$REVOCATION_VECTORS" \
+            > "$LOG" 2>&1 || rc=$?
+          cat "$LOG"
+          if [ "$rc" -ne 0 ]; then
+            exit "$rc"
+          fi
+          grep -q '^7/7 vectors conform' "$LOG"
+
+      # Everything above only ever proves the runner can say yes. A harness
+      # degraded into always-passing looks identical to a healthy one until it
+      # is handed something it must refuse. The mutation used here is the
+      # runner's own structural pre-gate: a suite whose positive controls have
+      # been stripped cannot distinguish a working enforcement layer from one
+      # that rejects everything, and the runner exits 2 on exactly that. Exit 2
+      # rather than merely non-zero, because a crash, a missing file and a
+      # refusal all exit non-zero and only one of them is the check working.
+      - name: Prove the runner still refuses a structurally invalid suite
+        env:
+          MUTANT: ${{ runner.temp }}/no-positive-control.json
+        run: |
+          set -euo pipefail
+          uv run --python "$PYTHON_VERSION" --no-project python - <<'PY'
+          import json, os
+          suite = json.loads(open(os.environ["CORE_VECTORS"], encoding="utf-8").read())
+          for vector in suite["vectors"]:
+              vector["positive_control"] = False
+          with open(os.environ["MUTANT"], "w", encoding="utf-8") as handle:
+              json.dump(suite, handle)
+          PY
+          LOG="$(mktemp)"
+          rc=0
+          uv run --python "$PYTHON_VERSION" --no-project \
+            "$RUNNER" --adapter "$CORE_ADAPTER" --vectors "$MUTANT" \
+            > "$LOG" 2>&1 || rc=$?
+          cat "$LOG"
+          if [ "$rc" -ne 2 ]; then
+            echo "::error::The runner returned ${rc} for a suite with no positive control; it must return 2. A runner that no longer refuses is not measuring anything."
+            exit 1
+          fi
