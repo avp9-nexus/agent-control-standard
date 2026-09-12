@@ -1,6 +1,6 @@
 {
   "$schema": "../vector.schema.json",
-  "suite": "enforcement-negative-v0",
+  "suite": "enforcement-negative-v0 (v0.2 shape: requirement anchor and spec version on every vector)",
   "vectors": [
     {
       "id": "neg-cat1-001",
@@ -31,7 +31,15 @@
           "settled"
         ]
       },
-      "positive_control": false
+      "positive_control": false,
+      "requirement": {
+        "spec_version": "0.1.2",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/conformance.md#acs-core-mandatory-baseline",
+        "clause": "SessionContext and Intent",
+        "quote": "session_id, chain_hash (rolling SHA-256), append-only ContextEntry chain",
+        "ledger_id": null
+      }
     },
     {
       "id": "neg-cat1-002",
@@ -63,7 +71,15 @@
           "ceiling"
         ]
       },
-      "positive_control": false
+      "positive_control": false,
+      "requirement": {
+        "spec_version": "0.1.2",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/conformance.md#acs-core-mandatory-baseline",
+        "clause": "SessionContext and Intent",
+        "quote": "session_id, chain_hash (rolling SHA-256), append-only ContextEntry chain",
+        "ledger_id": null
+      }
     },
     {
       "id": "pos-cat1-001",
@@ -91,7 +107,15 @@
       "expected": {
         "verdict": "PASS"
       },
-      "positive_control": true
+      "positive_control": true,
+      "requirement": {
+        "spec_version": "0.1.2",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/conformance.md#acs-core-mandatory-baseline",
+        "clause": "SessionContext and Intent",
+        "quote": "session_id, chain_hash (rolling SHA-256), append-only ContextEntry chain",
+        "ledger_id": null
+      }
     },
     {
       "id": "neg-cat2-001",
@@ -123,7 +147,15 @@
           "already"
         ]
       },
-      "positive_control": false
+      "positive_control": false,
+      "requirement": {
+        "spec_version": "0.1.2",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/conformance.md#acs-core-mandatory-baseline",
+        "clause": "Replay protection",
+        "quote": "Guardians MUST reject replays per §10.3",
+        "ledger_id": null
+      }
     },
     {
       "id": "neg-cat2-002",
@@ -153,7 +185,15 @@
           "session"
         ]
       },
-      "positive_control": false
+      "positive_control": false,
+      "requirement": {
+        "spec_version": "0.1.2",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/conformance.md#acs-core-mandatory-baseline",
+        "clause": "Replay protection",
+        "quote": "Guardians MUST reject replays per §10.3",
+        "ledger_id": null
+      }
     },
     {
       "id": "neg-cat3-001",
@@ -183,7 +223,15 @@
           "fresh"
         ]
       },
-      "positive_control": false
+      "positive_control": false,
+      "requirement": {
+        "spec_version": "0.1.2",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/conformance.md#acs-core-mandatory-baseline",
+        "clause": "Decision honoring",
+        "quote": "the Observed Agent MUST wait for the Guardian's decision up to the negotiated timeout and apply it",
+        "ledger_id": null
+      }
     },
     {
       "id": "pos-cat3-001",
@@ -209,7 +257,15 @@
       "expected": {
         "verdict": "PASS"
       },
-      "positive_control": true
+      "positive_control": true,
+      "requirement": {
+        "spec_version": "0.1.2",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/conformance.md#acs-core-mandatory-baseline",
+        "clause": "Decision honoring",
+        "quote": "the Observed Agent MUST wait for the Guardian's decision up to the negotiated timeout and apply it",
+        "ledger_id": null
+      }
     },
     {
       "id": "neg-cat4-001",
@@ -235,10 +291,18 @@
         "verdict": "REJECT",
         "code": "PRINCIPAL_MISMATCH",
         "reason_must_mention": [
-          "agent"
+          "actor"
         ]
       },
-      "positive_control": false
+      "positive_control": false,
+      "requirement": {
+        "spec_version": "0.1.2",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/conformance.md#acs-core-mandatory-baseline",
+        "clause": "Dispositions",
+        "quote": "All five (ALLOW, DENY, MODIFY, ASK, DEFER) with required fields per §6",
+        "ledger_id": null
+      }
     },
     {
       "id": "neg-cat4-002",
@@ -261,7 +325,15 @@
           "device"
         ]
       },
-      "positive_control": false
+      "positive_control": false,
+      "requirement": {
+        "spec_version": "0.1.2",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/conformance.md#acs-core-mandatory-baseline",
+        "clause": "Dispositions",
+        "quote": "All five (ALLOW, DENY, MODIFY, ASK, DEFER) with required fields per §6",
+        "ledger_id": null
+      }
     },
     {
       "id": "neg-cat5-001",
@@ -289,7 +361,15 @@
           "encod"
         ]
       },
-      "positive_control": false
+      "positive_control": false,
+      "requirement": {
+        "spec_version": "0.1.2",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/conformance.md#acs-core-mandatory-baseline",
+        "clause": "Baseline integrity",
+        "quote": "every request and response carries a signature over the canonical envelope",
+        "ledger_id": null
+      }
     },
     {
       "id": "neg-cat5-002",
@@ -314,10 +394,18 @@
         "verdict": "UNMEASURABLE",
         "code": "MALFORMED_EVIDENCE",
         "reason_must_mention": [
-          "6"
+          "fields"
         ]
       },
-      "positive_control": false
+      "positive_control": false,
+      "requirement": {
+        "spec_version": "0.1.2",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/conformance.md#acs-core-mandatory-baseline",
+        "clause": "Baseline integrity",
+        "quote": "every request and response carries a signature over the canonical envelope",
+        "ledger_id": null
+      }
     },
     {
       "id": "neg-cat5-003",
@@ -345,7 +433,15 @@
           "measur"
         ]
       },
-      "positive_control": false
+      "positive_control": false,
+      "requirement": {
+        "spec_version": "0.1.2",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/conformance.md#acs-core-mandatory-baseline",
+        "clause": "Baseline integrity",
+        "quote": "every request and response carries a signature over the canonical envelope",
+        "ledger_id": null
+      }
     },
     {
       "id": "neg-cat6-001",
@@ -376,7 +472,15 @@
           "reference"
         ]
       },
-      "positive_control": false
+      "positive_control": false,
+      "requirement": {
+        "spec_version": "0.1.2",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/conformance.md#acs-core-mandatory-baseline",
+        "clause": "Decision honoring, fail-open accounting",
+        "quote": "records every fail-open proceed as an audit event",
+        "ledger_id": null
+      }
     },
     {
       "id": "neg-cat6-002",
@@ -408,7 +512,15 @@
           "bound"
         ]
       },
-      "positive_control": false
+      "positive_control": false,
+      "requirement": {
+        "spec_version": "0.1.2",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/conformance.md#acs-core-mandatory-baseline",
+        "clause": "Decision honoring, fail-open accounting",
+        "quote": "records every fail-open proceed as an audit event",
+        "ledger_id": null
+      }
     },
     {
       "id": "pos-cat6-001",
@@ -436,7 +548,15 @@
       "expected": {
         "verdict": "PASS"
       },
-      "positive_control": true
+      "positive_control": true,
+      "requirement": {
+        "spec_version": "0.1.2",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/conformance.md#acs-core-mandatory-baseline",
+        "clause": "Decision honoring, fail-open accounting",
+        "quote": "records every fail-open proceed as an audit event",
+        "ledger_id": null
+      }
     },
     {
       "id": "pos-cat2-001",
@@ -464,7 +584,15 @@
       "expected": {
         "verdict": "PASS"
       },
-      "positive_control": true
+      "positive_control": true,
+      "requirement": {
+        "spec_version": "0.1.2",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/conformance.md#acs-core-mandatory-baseline",
+        "clause": "Replay protection",
+        "quote": "Guardians MUST reject replays per §10.3",
+        "ledger_id": null
+      }
     },
     {
       "id": "pos-cat4-001",
@@ -483,7 +611,15 @@
       "expected": {
         "verdict": "PASS"
       },
-      "positive_control": true
+      "positive_control": true,
+      "requirement": {
+        "spec_version": "0.1.2",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/conformance.md#acs-core-mandatory-baseline",
+        "clause": "Dispositions",
+        "quote": "All five (ALLOW, DENY, MODIFY, ASK, DEFER) with required fields per §6",
+        "ledger_id": null
+      }
     },
     {
       "id": "neg-cat4-003",
@@ -504,7 +640,15 @@
           "device"
         ]
       },
-      "positive_control": false
+      "positive_control": false,
+      "requirement": {
+        "spec_version": "0.1.2",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/conformance.md#acs-core-mandatory-baseline",
+        "clause": "Dispositions",
+        "quote": "All five (ALLOW, DENY, MODIFY, ASK, DEFER) with required fields per §6",
+        "ledger_id": null
+      }
     },
     {
       "id": "pos-cat5-001",
@@ -528,7 +672,15 @@
       "expected": {
         "verdict": "PASS"
       },
-      "positive_control": true
+      "positive_control": true,
+      "requirement": {
+        "spec_version": "0.1.2",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/conformance.md#acs-core-mandatory-baseline",
+        "clause": "Baseline integrity",
+        "quote": "every request and response carries a signature over the canonical envelope",
+        "ledger_id": null
+      }
     }
   ]
 }

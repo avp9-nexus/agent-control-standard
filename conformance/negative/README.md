@@ -134,9 +134,20 @@ it - `neg-cat4-003` is that vector, and it was written because the mutant lived.
 whose pattern no longer matches the adapter is reported as such rather than counted as
 killed, so a rule that silently stops being tested shows up as a changed count.
 
-## Provenance
+## What each vector binds to
 
-Vectors are generalized from an enforcement layer running in production since June 2026
-(hash-chained decision registries, out-of-band human confirmation, on-chain context checks).
-Each rejection code in the enumeration was produced by a real refusal before it was named
-here. The field notes behind them are public: https://github.com/avp9-nexus/nexus-art
+Every vector carries a `requirement` object: the spec version it was written against, the profile,
+the anchor in `docs/spec/conformance.md`, the clause, and the sentence it quotes. The corpus binds to
+the normative text before it binds to CI, which is what #33 and #53 both asked for.
+
+`ledger_id` is present on every vector and is **null**, deliberately. The normative-requirement ledger
+proposed in #33 does not exist yet, so there is no identifier to cite. The field is there so that the
+day the ledger lands, filling it is a mechanical pass and not a re-reading of nineteen vectors. An
+identifier invented here would have looked like a binding and been a guess.
+
+## What this corpus does not claim
+
+These vectors were written for this suite. They are not evidence about any deployment, and nothing
+here reports on a running system: the only thing measured in this directory is the suite's own
+behaviour against an adapter, which anyone can re-run with the two commands above.
+

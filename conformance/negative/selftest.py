@@ -44,6 +44,15 @@ _IMPORT_REAL = (
 # nothing, or of satisfying the entry-point contract without dispatching through the
 # thing it names.
 FAKE_ADAPTERS = {
+    # The case that ran green before the runner resolved the name it was given: right answers,
+    # and an enforcement path that exists nowhere. Measured at 19/19 and exit 0.
+    "phantom_entry_point": (
+        _IMPORT_REAL
+        + "def evaluate(q):\n"
+          "    out = dict(_inner(q))\n"
+          "    out['entry_point'] = 'nowhere.at.all.this_function_does_not_exist'\n"
+          "    return out\n"
+    ),
     "answer_key": (
         "# Would echo the expected verdict back. The runner never hands it one, so it\n"
         "# has nothing to echo and fails on its first call.\n"
@@ -109,9 +118,18 @@ def _suite_without_positive_control(vectors):
     return [v for v in vectors if v["expected"]["verdict"] != "PASS"]
 
 
+def _suite_without_requirement(vectors):
+    """The schema shipped here is RUN now, not only shipped: a vector that drops its normative
+    binding is refused before any adapter is consulted."""
+    out = [dict(v) for v in vectors]
+    out[0].pop("requirement", None)
+    return out
+
+
 RUNNER_GUARDS = {
     "empty_suite": (lambda vs: []),
     "no_positive_control": _suite_without_positive_control,
+    "vector_without_requirement": _suite_without_requirement,
 }
 
 # Each mutant deletes ONE check from the reference adapter by rewriting a single line
@@ -199,6 +217,33 @@ def main() -> int:
             else:
                 failed.append((f"guard:{name}", "ran a suite that cannot discriminate, and exited 0"))
 
+        # The verdict has to be readable in the output, not only in the exit code. A category
+        # failure used to leave the headline saying "19/19 vectors conform" three lines above a
+        # non-zero exit: a human read the headline, CI read the code, and they disagreed.
+        split = tmp / "fake_split_entry_points.py"
+        split.write_text(
+            _IMPORT_REAL
+            + "def evaluate(q):\n"
+              "    out = dict(_inner(q))\n"
+              "    out['entry_point'] = ('reference_adapter.evaluate'\n"
+              "                          if str(q.get('id', '')).startswith('pos-') else 'os.getcwd')\n"
+              "    return out\n",
+            encoding="utf-8")
+        code, out = run(split)
+        if code != 0 and "RESULT: FAIL" in out and "vectors conform" in out:
+            held += 1
+            print("  held  category failure: the RESULT line says FAIL under a conform headline")
+        else:
+            failed.append(("result_line_fail",
+                           "a run that exits non-zero must say FAIL in its own output"))
+
+        code, out = run(ADAPTER)
+        if code == 0 and "RESULT: PASS" in out:
+            held += 1
+            print("  held  a clean run says PASS in its own output")
+        else:
+            failed.append(("result_line_pass", "a clean run must say PASS in its own output"))
+
         for name, (pattern, replacement) in ADAPTER_MUTANTS.items():
             mutated, n = re.subn(pattern, replacement, source, count=1)
             if n != 1:
@@ -225,3 +270,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+

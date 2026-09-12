@@ -10,11 +10,22 @@
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["id", "category", "description", "input", "expected", "positive_control"],
+        "required": ["id", "category", "description", "requirement", "input", "expected", "positive_control"],
         "properties": {
           "id": { "type": "string", "pattern": "^(neg|pos)-cat[0-9]+-[0-9]{3}$" },
           "category": { "type": "integer", "minimum": 1, "maximum": 6 },
           "description": { "type": "string", "minLength": 20 },
+          "requirement": {
+            "type": "object",
+            "required": ["spec_version", "profile", "anchor", "clause", "quote", "ledger_id"],
+            "properties": {
+              "spec_version": { "type": "string", "minLength": 3 },
+              "profile": { "type": "string", "minLength": 3 },
+              "anchor": { "type": "string", "minLength": 10 },
+              "clause": { "type": "string", "minLength": 3 },
+              "quote": { "type": "string", "minLength": 20 }
+            }
+          },
           "input": {
             "type": "object",
             "required": ["action", "authorization", "state"],
@@ -39,3 +50,4 @@
     }
   }
 }
+

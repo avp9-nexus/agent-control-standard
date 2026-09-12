@@ -3,7 +3,18 @@
 Ships WITH the suite for one reason: a runner nobody can execute end-to-end is a promise.
 This adapter is the suite's own positive control. It is deliberately small and readable;
 it is not a product.
+
+The entry point is DERIVED, never typed. Three earlier versions of this file declared
+`reference_adapter.decide` while defining `evaluate` and no `decide`: the shipped example named a
+function that did not exist, and the runner accepted it because it compared strings instead of
+resolving them. A name that is computed from the function that answers cannot drift away from it.
 """
+
+import os
+
+# Derived from the FILE, not from __name__: a runner that loads this file under a synthetic module
+# name would otherwise make the adapter announce a module nobody can import.
+ENTRY_POINT = os.path.splitext(os.path.basename(__file__))[0] + ".evaluate"
 
 
 def evaluate(vector):
@@ -11,10 +22,10 @@ def evaluate(vector):
     action, auth, state = inp.get("action", {}), inp.get("authorization", {}), inp.get("state", {})
 
     def reject(code, reason):
-        return {"verdict": "REJECT", "code": code, "entry_point": "reference_adapter.decide", "reason": reason}
+        return {"verdict": "REJECT", "code": code, "entry_point": ENTRY_POINT, "reason": reason}
 
     def unmeasurable(code, reason):
-        return {"verdict": "UNMEASURABLE", "code": code, "entry_point": "reference_adapter.decide", "reason": reason}
+        return {"verdict": "UNMEASURABLE", "code": code, "entry_point": ENTRY_POINT, "reason": reason}
 
     # Evidence shape first: fail closed on what cannot be decoded, with its own code.
     oracle = state.get("oracle_response", "ABSENT_KEY")
@@ -79,4 +90,5 @@ def evaluate(vector):
     if "ceiling" in target and int(action.get("amount", 0)) > int(target["ceiling"]):
         return reject("CONTEXT_NOT_SUPPORTED", f"amount exceeds the ceiling the state carries ({target['ceiling']})")
 
-    return {"verdict": "PASS", "code": None, "entry_point": "reference_adapter.decide", "reason": "context supports the action"}
+    return {"verdict": "PASS", "code": None, "entry_point": ENTRY_POINT, "reason": "context supports the action"}
+
