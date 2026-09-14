@@ -12,7 +12,7 @@
         "type": "object",
         "required": ["id", "category", "description", "requirement", "input", "expected", "positive_control"],
         "properties": {
-          "id": { "type": "string", "pattern": "^(neg|pos)-cat[0-9]+-[0-9]{3}$" },
+          "id": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
           "category": { "type": "integer", "minimum": 1, "maximum": 6 },
           "description": { "type": "string", "minLength": 20 },
           "requirement": {
@@ -50,4 +50,3 @@
     }
   }
 }
-

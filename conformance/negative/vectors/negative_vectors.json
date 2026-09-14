@@ -3,7 +3,7 @@
   "suite": "enforcement-negative-v0 (v0.2 shape: requirement anchor and spec version on every vector)",
   "vectors": [
     {
-      "id": "neg-cat1-001",
+      "id": "3e191ba654dee621aafaf8bcbb4af331b15dc60aa60ec3545f5ec0e1f30afdc0",
       "category": 1,
       "description": "Correctly-signed action targeting an item whose state no longer carries it: the auction is already settled. Signature verification alone passes; only consulting state catches it.",
       "input": {
@@ -42,7 +42,7 @@
       }
     },
     {
-      "id": "neg-cat1-002",
+      "id": "739554182725c11e9b5a9927af43d8c80b49717be8d2a67ebaa9b1eccea760b3",
       "category": 1,
       "description": "Correctly-signed action exceeding a declared bound: amount above the ceiling the state carries. Almost right: same signer, same target, open state.",
       "input": {
@@ -82,9 +82,9 @@
       }
     },
     {
-      "id": "pos-cat1-001",
+      "id": "b096d50f8e8b68b53787570a1f89aae23cf0855942c8e68017bb35bc322dd33b",
       "category": 1,
-      "description": "POSITIVE CONTROL. Identical to neg-cat1-002 except the amount sits under the ceiling. MUST pass: an enforcement layer that rejects this is indistinguishable from one that rejects everything.",
+      "description": "POSITIVE CONTROL. Identical to the over-ceiling vector except the amount sits under the ceiling. MUST pass: an enforcement layer that rejects this is indistinguishable from one that rejects everything.",
       "input": {
         "action": {
           "type": "commit_funds",
@@ -118,7 +118,7 @@
       }
     },
     {
-      "id": "neg-cat2-001",
+      "id": "346b52900129b6b85e6ec38f8709bc13ee871e5c12c5465776a0ac73a1d901cd",
       "category": 2,
       "description": "Replayed authorization: the same one-time approval presented for a second act. One authorization covers one act; the second presentation must fail even though every byte is valid.",
       "input": {
@@ -158,7 +158,7 @@
       }
     },
     {
-      "id": "neg-cat2-002",
+      "id": "d36436a74f6b6553446e9b3d33c574224cf75af8f7888c26caec659242b06b8e",
       "category": 2,
       "description": "Replay across sessions: an approval secret captured from a previous armed session, structurally valid, presented by a fresh confirmer. The session binding, not the secret's shape, is what must be checked.",
       "input": {
@@ -196,7 +196,7 @@
       }
     },
     {
-      "id": "neg-cat3-001",
+      "id": "25c6763917c44c01e0387848a5d00c4b7088816f898499f31f4780cf8307b26d",
       "category": 3,
       "description": "Stale decision: evidence older than the declared freshness bound. The decision was genuine when written; only its age disqualifies it. Expiry only — revocation vectors are a declared gap, see README.",
       "input": {
@@ -234,7 +234,7 @@
       }
     },
     {
-      "id": "pos-cat3-001",
+      "id": "f63c72a4071544afa077c11fd9b5250a8fb6faddfacfc75db0c335f512d3e79e",
       "category": 3,
       "description": "POSITIVE CONTROL. Identical decision, re-issued inside the freshness bound. MUST pass.",
       "input": {
@@ -268,7 +268,7 @@
       }
     },
     {
-      "id": "neg-cat4-001",
+      "id": "f66e906334546197e48959e7d0e6fcc22d9c00d2413d6a13416eb94aad585ef4",
       "category": 4,
       "description": "Approval bound to the wrong principal: the decision names agent-B, the actor is agent-A. Everything else matches.",
       "input": {
@@ -305,7 +305,7 @@
       }
     },
     {
-      "id": "neg-cat4-002",
+      "id": "3b72d76325058ecb2e83d7044ae0eebbc747cd0afcfc5c48a9beb123575de2ff",
       "category": 4,
       "description": "Wrong signing device: the operation requires the device holding key K1, the connected device derives K2. The check must happen by reading the device, never by asking the operator which one is plugged in.",
       "input": {
@@ -336,7 +336,7 @@
       }
     },
     {
-      "id": "neg-cat5-001",
+      "id": "e4d04fe9b4ba791918445c0c17cd4f97f9cb687a99ad1250cb84c361174d2f74",
       "category": 5,
       "description": "Malformed evidence, regulation length: the payload has exactly the right byte length but does not encode the declared type (leading bytes non-zero where an address encoding requires zeros). A length check alone fails open here.",
       "input": {
@@ -372,7 +372,7 @@
       }
     },
     {
-      "id": "neg-cat5-002",
+      "id": "1a74001ee2074ae051721bc5ed4aad0782d662d635aa034bdc380563445626d8",
       "category": 5,
       "description": "Truncated evidence: two fields served where six are declared. The consumer must refuse to conclude, never zero-fill the missing fields.",
       "input": {
@@ -408,7 +408,7 @@
       }
     },
     {
-      "id": "neg-cat5-003",
+      "id": "ac18b0f18d9704f2051497cc4f394f304d1e6d2b1ebd6a23b2caf90522301afe",
       "category": 5,
       "description": "Oracle unreachable: the state needed to judge cannot be read at all. Absence of measurement is never a pass, and the code must differ from a measured rejection.",
       "input": {
@@ -444,7 +444,7 @@
       }
     },
     {
-      "id": "neg-cat6-001",
+      "id": "4196033b5379f667c53e8c1a2bddcae55301b6d63a13664ffc25222c7f25b232",
       "category": 6,
       "description": "Stripped observability reference: the action's required registry reference is zeroed. The enforcement point must refuse the omission itself, before judging anything else.",
       "input": {
@@ -483,7 +483,7 @@
       }
     },
     {
-      "id": "neg-cat6-002",
+      "id": "f4ee4c9ff017c2969d6c1159341ca462ba49f094dcf913d75fa0946aaa40c17a",
       "category": 6,
       "description": "Mismatched observability reference: a non-zero reference that diverges from the one already bound to this context by a prior act. Naming something is required; naming a DIFFERENT something must fail.",
       "input": {
@@ -523,7 +523,7 @@
       }
     },
     {
-      "id": "pos-cat6-001",
+      "id": "4bfc3776ddcdcb502bc233835c62e9f7cc515c2cab1e9437c30bd5f929bb7209",
       "category": 6,
       "description": "POSITIVE CONTROL. Same action naming the SAME reference as the one bound. MUST pass: the check is on divergence, not on novelty.",
       "input": {
@@ -559,9 +559,9 @@
       }
     },
     {
-      "id": "pos-cat2-001",
+      "id": "ba4352287afce4c1507b58820c87684e59acba8871c7d49049be20c89ed171a5",
       "category": 2,
-      "description": "POSITIVE CONTROL. Same shape as neg-cat2-001 but the one-time authorization is unconsumed. MUST pass.",
+      "description": "POSITIVE CONTROL. Same shape as the consumed-authorization vector but the one-time authorization is unconsumed. MUST pass.",
       "input": {
         "action": {
           "type": "commit_funds",
@@ -595,7 +595,7 @@
       }
     },
     {
-      "id": "pos-cat4-001",
+      "id": "ceb65718487ea879c889cd46e6794573e50f4f009a08e1cae655d7381babe3d4",
       "category": 4,
       "description": "POSITIVE CONTROL. The connected device derives exactly the required key. MUST pass.",
       "input": {
@@ -622,7 +622,7 @@
       }
     },
     {
-      "id": "neg-cat4-003",
+      "id": "b34aed30a51b957bfdf064abadacb7acb51ed77fdcb3e94aed78cf5a1f7fa7e4",
       "category": 4,
       "description": "No evidence of which device is connected: the operation requires the device holding key K1, and nothing was read about what is plugged in. Absence of a measurement is not a match - the action is refused under the unmeasurable code, not under the mismatch code, because no mismatch was observed.",
       "input": {
@@ -651,7 +651,7 @@
       }
     },
     {
-      "id": "pos-cat5-001",
+      "id": "91411279ddefd976754a3a232c17f2de3a70b97dd3b255f898265f91e5c5f608",
       "category": 5,
       "description": "POSITIVE CONTROL. Well-formed evidence of the declared shape (address encoding with zeroed leading bytes). MUST pass: strictness is about shape, not about refusing evidence per se.",
       "input": {

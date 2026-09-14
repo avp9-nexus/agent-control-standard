@@ -16,16 +16,21 @@ distinguish an enforcement layer that works from one that rejects everything.
 Adapter contract: a Python file exposing
     evaluate(question: dict) -> {"verdict": "PASS|REJECT|UNMEASURABLE", "code": str|None,
                                  "reason": str, "entry_point": str}
-where question carries only {"id", "category", "input"} - the expected verdict and the
-control flag never leave the runner, so an adapter that would derive its verdict from
-the answer has nothing to derive it from (review 5444732337, run against 459ec820:
-a six-line answer-key adapter scored 18/18 while enforcing nothing) - and entry_point
-names the production entry point the adapter dispatched through.
+where question carries `input` and nothing else. The expected verdict, the control flag, the
+category and the vector id never leave the runner: an adapter that would derive its verdict
+from the answer has nothing to derive it from (review 5444732337, run against 459ec820: a
+six-line answer-key adapter scored 18/18 while enforcing nothing), and one that would derive
+it from the name has no name either (review 5561917538 and issue #53: the ids read `neg-…` /
+`pos-…`, so an adapter that discarded its input scored 19/19 off the first field it was
+handed). A vector's id is the SHA-256 of its canonical `input` (see vector_id), and the
+runner refuses a suite whose ids say otherwise, so a name carries nothing the bytes do not.
+entry_point names the production entry point the adapter dispatched through.
 
 Usage:
     python runner.py --adapter path/to/adapter.py [--vectors vectors/negative_vectors.json]
 """
 import argparse
+import hashlib
 import importlib
 import importlib.util
 import json
@@ -78,6 +83,19 @@ def resolve_entry_point(name: str, adapter_path: Path):
     if not callable(target):
         return False, f"{name} resolves to {type(target).__name__}, not to a callable"
     return True, ""
+
+
+def vector_id(v) -> str:
+    """The id of a vector is the SHA-256 of its canonical `input`: JSON with sorted keys, no
+    whitespace, UTF-8, non-ASCII kept as is. Nothing else enters the digest - not the verdict,
+    not the category, not the description - so a name carries only what the bytes under test
+    carry. The previous ids read `neg-cat…` / `pos-cat…`: the verdict class was in the first
+    field an adapter received, and one that never opened `input` scored 19/19 (issue #53).
+    Naming by digest closes the leak through the identifier, and nothing else: the corpus is
+    published, so a table keyed on the bytes of `input` still scores as an implementation does.
+    """
+    canon = json.dumps(v["input"], sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(canon.encode("utf-8")).hexdigest()
 
 
 def check_against_schema(suite, schema_path: Path):
@@ -172,6 +190,23 @@ def main() -> int:
               "layer from one that does nothing, and reports a clean run either way.")
         return 2
 
+    # A name is not a fact: every id must be the digest of the input it names, checked here
+    # rather than promised in a README. A vector renamed by hand, or edited in place under its
+    # old name, is refused before any adapter is consulted - the identifier cannot be made to
+    # carry a verdict again without the suite going red on load.
+    wrong = [(v["id"], vector_id(v)) for v in vectors if v["id"] != vector_id(v)]
+    if wrong:
+        print(f"SUITE INVALID: {len(wrong)} vector(s) whose id is not the SHA-256 of their canonical input")
+        for vid, digest in wrong[:10]:
+            print(f"  {vid}: expected {digest}")
+        if len(wrong) > 10:
+            print(f"  ... and {len(wrong) - 10} more")
+        return 2
+    ids = [v["id"] for v in vectors]
+    if len(set(ids)) != len(ids):
+        print("SUITE INVALID: duplicate ids - two vectors with the same canonical input are one vector")
+        return 2
+
     # Structural gate first: every category present must carry a positive control.
     cats = defaultdict(lambda: {"neg": 0, "pos": 0})
     for v in vectors:
@@ -185,11 +220,12 @@ def main() -> int:
     failures = []
     entry_points = defaultdict(lambda: {"pos": set(), "neg": set()})
     for v in vectors:
-        # The adapter is never handed the answer: expected verdict and control flag stay in
-        # the runner, so the answer-key family stops being something to detect and becomes
-        # something that cannot be expressed (review 5444732337).
+        # The adapter is handed the input and nothing else: expected verdict, control flag,
+        # category and id stay in the runner. The answer-key family (review 5444732337) and
+        # the name-reading family (issue #53) stop being something to detect and become
+        # something that cannot be expressed.
         try:
-            question = {"id": v["id"], "category": v["category"], "input": v["input"]}
+            question = {"input": v["input"]}
             out = adapter.evaluate(question) or {}
         except Exception as e:  # an adapter crash - or a malformed vector - is a failure, never a skip
             failures.append((v.get("id", "?"), f"adapter raised {type(e).__name__}: {e}"))
@@ -250,4 +286,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-

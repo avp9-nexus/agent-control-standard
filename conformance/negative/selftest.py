@@ -12,7 +12,8 @@ Three families, and the third is the one that finds vectors nobody wrote:
   FAKE ADAPTERS      implementations that enforce nothing, or that satisfy the letter of
                      the adapter contract while defeating its purpose.
   RUNNER GUARDS      inputs the runner itself must refuse before any adapter is consulted:
-                     an empty suite, and a category with no positive control.
+                     an empty suite, a category with no positive control, a vector without
+                     its requirement, and a vector whose id is not the digest of its input.
   ADAPTER MUTANTS    each deletes exactly one check from the reference adapter. The suite
                      has to go red for every one of them. A surviving mutant is not a
                      tolerable gap - it is a vector nobody wrote, and it names which one.
@@ -61,6 +62,22 @@ FAKE_ADAPTERS = {
         "    return {'verdict': e['verdict'], 'code': e.get('code'),\n"
         "            'reason': ' '.join(e.get('reason_must_mention', [])),\n"
         "            'entry_point': 'acme.enforcement.decide'}\n"
+    ),
+    # Looks the verdict up by the NAME the runner hands over, and never opens `input`. Under
+    # the previous contract the name carried the verdict class (neg-/pos-), and an adapter
+    # that discarded its input scored 19/19 (issue #53); with the ids named by digest the
+    # published table still answers, as long as the runner hands the id over at all. It hands
+    # over `input` alone, so this lookup has no key and fails on its first call. Its entry
+    # point resolves on purpose: the only thing that refuses it is the missing id.
+    "answer_key_by_id": (
+        _IMPORT_REAL
+        + "import json\n"
+        + "_T = {v['id']: v['expected'] for v in json.load(open(r'%s', encoding='utf-8'))['vectors']}\n" % VECTORS.resolve()
+        + "def evaluate(q):\n"
+          "    e = _T[q['id']]\n"
+          "    return {'verdict': e['verdict'], 'code': e.get('code'),\n"
+          "            'reason': ' '.join(e.get('reason_must_mention', [])),\n"
+          "            'entry_point': 'reference_adapter.evaluate'}\n"
     ),
     "reject_everything": (
         "# The case the positive controls exist for: refusing everything is not enforcing.\n"
@@ -126,10 +143,21 @@ def _suite_without_requirement(vectors):
     return out
 
 
+def _suite_with_an_input_edited_under_its_name(vectors):
+    """A vector's id is the SHA-256 of its canonical input. Editing the input and keeping the
+    name publishes a name that no longer describes its bytes - the same door the neg-/pos-
+    prefixes opened, one edit away. The runner recomputes every digest at load and refuses the
+    suite, so a vector renamed by hand or edited in place cannot enter a run."""
+    out = json.loads(json.dumps(vectors))
+    out[0]["input"]["state"]["edited_after_naming"] = True
+    return out
+
+
 RUNNER_GUARDS = {
     "empty_suite": (lambda vs: []),
     "no_positive_control": _suite_without_positive_control,
     "vector_without_requirement": _suite_without_requirement,
+    "input_edited_under_its_name": _suite_with_an_input_edited_under_its_name,
 }
 
 # Each mutant deletes ONE check from the reference adapter by rewriting a single line
@@ -220,13 +248,15 @@ def main() -> int:
         # The verdict has to be readable in the output, not only in the exit code. A category
         # failure used to leave the headline saying "19/19 vectors conform" three lines above a
         # non-zero exit: a human read the headline, CI read the code, and they disagreed.
+        # The split is made on the verdict the reference adapter returned, never on the id:
+        # the adapter is not handed one, and the ids no longer say which side a vector is on.
         split = tmp / "fake_split_entry_points.py"
         split.write_text(
             _IMPORT_REAL
             + "def evaluate(q):\n"
               "    out = dict(_inner(q))\n"
               "    out['entry_point'] = ('reference_adapter.evaluate'\n"
-              "                          if str(q.get('id', '')).startswith('pos-') else 'os.getcwd')\n"
+              "                          if out['verdict'] == 'PASS' else 'os.getcwd')\n"
               "    return out\n",
             encoding="utf-8")
         code, out = run(split)
@@ -270,4 +300,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-
