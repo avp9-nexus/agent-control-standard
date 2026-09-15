@@ -191,7 +191,16 @@ ADAPTER_MUTANTS = {
         r'if auth\["session_secret"\] != f"SECRET_OF_SESSION_\{auth\[.current_session.\]\}":',
         'if False:'),
     "drop_freshness_check": (
-        r'if age > auth\["freshness_bound_seconds"\]:', 'if False:'),
+        r'if age > freshness_bound:', 'if False:'),
+    # The bound that decides freshness is the policy's, never the evidence's: an adapter that lets the
+    # authorization supply it passes a stale decision declaring a ten-year bound.
+    "trust_the_declared_bound": (
+        r'freshness_bound = state\.get\("freshness_bound_seconds"\)',
+        'freshness_bound = auth.get("freshness_bound_seconds", state.get("freshness_bound_seconds"))'),
+    # An age that cannot be measured is not a fresh one: skipping the check when the timestamp is
+    # missing passes a decision nobody can date.
+    "treat_missing_timestamp_as_fresh": (
+        r'if freshness_bound is not None and "decision_written_at" not in auth:', 'if False:'),
     "drop_settled_context_check": (
         r'if target\.get\("settled"\):', 'if False:'),
     "drop_ceiling_check": (

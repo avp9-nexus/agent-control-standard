@@ -75,12 +75,20 @@ def evaluate(vector):
         if auth["session_secret"] != f"SECRET_OF_SESSION_{auth['current_session']}":
             return reject("REPLAY_CONSUMED", "secret belongs to a previous session")
 
-    # Freshness.
-    if "decision_written_at" in auth:
+    # Freshness. The bound that decides is policy the enforcement point holds, so it is read from the
+    # state and never from the authorization being judged: a decision that declared its own bound would
+    # declare its own verdict. Reading it from the authorization passed a stale decision carrying a
+    # ten-year bound, and skipping the check when the timestamp was missing passed a decision whose
+    # age nobody could measure.
+    freshness_bound = state.get("freshness_bound_seconds")
+    if freshness_bound is not None and "decision_written_at" not in auth:
+        return unmeasurable("ORACLE_UNAVAILABLE",
+                            "decision carries no timestamp; its freshness cannot be measured")
+    if freshness_bound is not None and "decision_written_at" in auth:
         from datetime import datetime
         age = (datetime.fromisoformat(state["now"].replace("Z", "+00:00"))
                - datetime.fromisoformat(auth["decision_written_at"].replace("Z", "+00:00"))).total_seconds()
-        if age > auth["freshness_bound_seconds"]:
+        if age > freshness_bound:
             return reject("STALE_DECISION", f"decision is {int(age)}s old, freshness bound exceeded")
 
     # Context: signature validity alone never suffices; the state must carry the action.
@@ -91,4 +99,3 @@ def evaluate(vector):
         return reject("CONTEXT_NOT_SUPPORTED", f"amount exceeds the ceiling the state carries ({target['ceiling']})")
 
     return {"verdict": "PASS", "code": None, "entry_point": ENTRY_POINT, "reason": "context supports the action"}
-

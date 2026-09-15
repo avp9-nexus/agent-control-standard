@@ -196,9 +196,9 @@
       }
     },
     {
-      "id": "25c6763917c44c01e0387848a5d00c4b7088816f898499f31f4780cf8307b26d",
+      "id": "a5069db29f4bc313fc128361243ae12a0f83724272ef77755042b198662f88d9",
       "category": 3,
-      "description": "Stale decision: evidence older than the declared freshness bound. The decision was genuine when written; only its age disqualifies it. Expiry only — revocation vectors are a declared gap, see README.",
+      "description": "Stale decision: evidence older than the freshness bound the enforcement point's policy sets. The decision was genuine when written; only its age disqualifies it. Expiry only — revocation vectors are a declared gap, see README.",
       "input": {
         "action": {
           "type": "launch_bidder",
@@ -206,14 +206,14 @@
         },
         "authorization": {
           "signature": "VALID",
-          "decision_written_at": "2026-08-16T14:46:02Z",
-          "freshness_bound_seconds": 900
+          "decision_written_at": "2026-08-16T14:46:02Z"
         },
         "state": {
           "now": "2026-08-16T15:15:08Z",
           "auction-44": {
             "open": true
-          }
+          },
+          "freshness_bound_seconds": 900
         }
       },
       "expected": {
@@ -234,7 +234,7 @@
       }
     },
     {
-      "id": "f63c72a4071544afa077c11fd9b5250a8fb6faddfacfc75db0c335f512d3e79e",
+      "id": "0d97bb3eed8be753c8d7793e9561991aa4e79aa01b7f9df52491d958b2460ab8",
       "category": 3,
       "description": "POSITIVE CONTROL. Identical decision, re-issued inside the freshness bound. MUST pass.",
       "input": {
@@ -244,20 +244,96 @@
         },
         "authorization": {
           "signature": "VALID",
-          "decision_written_at": "2026-08-16T15:16:00Z",
-          "freshness_bound_seconds": 900
+          "decision_written_at": "2026-08-16T15:16:00Z"
         },
         "state": {
           "now": "2026-08-16T15:16:25Z",
           "auction-44": {
             "open": true
-          }
+          },
+          "freshness_bound_seconds": 900
         }
       },
       "expected": {
         "verdict": "PASS"
       },
       "positive_control": true,
+      "requirement": {
+        "spec_version": "0.1.2",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/conformance.md#acs-core-mandatory-baseline",
+        "clause": "Decision honoring",
+        "quote": "the Observed Agent MUST wait for the Guardian's decision up to the negotiated timeout and apply it",
+        "ledger_id": null
+      }
+    },
+    {
+      "id": "70dcbbfe93fbfc21fc584807ef7e1e34290110fbb231ff0ec0fc987e53894f4e",
+      "category": 3,
+      "description": "Stale decision that declares its own freshness bound: the authorization carries a ten-year bound, the policy the enforcement point holds carries 900 seconds. The bound that decides freshness belongs to that policy, never to the evidence being judged; a decision that could declare its own bound would declare its own verdict.",
+      "input": {
+        "action": {
+          "type": "launch_bidder",
+          "target": "auction-44"
+        },
+        "authorization": {
+          "signature": "VALID",
+          "decision_written_at": "2026-08-16T14:46:02Z",
+          "freshness_bound_seconds": 315360000
+        },
+        "state": {
+          "now": "2026-08-16T15:15:08Z",
+          "auction-44": {
+            "open": true
+          },
+          "freshness_bound_seconds": 900
+        }
+      },
+      "expected": {
+        "verdict": "REJECT",
+        "code": "STALE_DECISION",
+        "reason_must_mention": [
+          "fresh"
+        ]
+      },
+      "positive_control": false,
+      "requirement": {
+        "spec_version": "0.1.2",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/conformance.md#acs-core-mandatory-baseline",
+        "clause": "Decision honoring",
+        "quote": "the Observed Agent MUST wait for the Guardian's decision up to the negotiated timeout and apply it",
+        "ledger_id": null
+      }
+    },
+    {
+      "id": "38596e02450a7f7b103d27e1ba4aaae823f00a4561586ee4d2f78be60b684bee",
+      "category": 3,
+      "description": "Decision with no timestamp, on an action whose policy requires freshness. Its age cannot be measured, and an age that cannot be measured is not a fresh one: the action is refused under the unmeasurable code, as an action is when the connected device was never read.",
+      "input": {
+        "action": {
+          "type": "launch_bidder",
+          "target": "auction-44"
+        },
+        "authorization": {
+          "signature": "VALID"
+        },
+        "state": {
+          "now": "2026-08-16T15:15:08Z",
+          "auction-44": {
+            "open": true
+          },
+          "freshness_bound_seconds": 900
+        }
+      },
+      "expected": {
+        "verdict": "UNMEASURABLE",
+        "code": "ORACLE_UNAVAILABLE",
+        "reason_must_mention": [
+          "fresh"
+        ]
+      },
+      "positive_control": false,
       "requirement": {
         "spec_version": "0.1.2",
         "profile": "ACS-Core",

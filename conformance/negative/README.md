@@ -39,13 +39,20 @@ inputs, so the property is enforced at load rather than promised here. It closes
 else: the corpus is published, so a table keyed on the bytes of `input` scores the same as an
 implementation, which is why this suite describes itself as a self-certification aid.
 
+**6. The value that decides a verdict is never carried by the evidence it judges.** A freshness bound
+is policy the enforcement point holds, so it lives in `state`, not in `authorization`. An adapter that
+read it from the authorization passed a stale decision declaring its own ten-year bound, and an adapter
+that skipped the check when the decision carried no timestamp passed a decision nobody could date. The
+first is refused as stale; the second is refused as unmeasurable, the same way an action is refused when
+the connected device was never read.
+
 ## Failure codes (proposed enumeration)
 
 | Code | Verdict | Meaning |
 |---|---|---|
 | `CONTEXT_NOT_SUPPORTED` | REJECT | Signature valid, but the consulted state does not carry this action (wrong target, closed auction, exceeded bound) |
 | `REPLAY_CONSUMED` | REJECT | The authorization was already used once; one authorization covers one act |
-| `STALE_DECISION` | REJECT | The evidence is older than the declared freshness bound |
+| `STALE_DECISION` | REJECT | The evidence is older than the freshness bound the enforcement point's policy sets |
 | `PRINCIPAL_MISMATCH` | REJECT | Approval bound to a different agent, tool, or signing device than the one acting |
 | `REFERENCE_MISSING` | REJECT | A required observability reference is present and unusable: zeroed, or bound to a different context |
 | `REFERENCE_MISMATCH` | REJECT | The named reference diverges from the one already bound to this action's context |
@@ -54,7 +61,7 @@ implementation, which is why this suite describes itself as a self-certification
 
 ## Vector schema
 
-All nineteen vectors live as a single array in `vectors/negative_vectors.json`; the schema
+All twenty-one vectors live as a single array in `vectors/negative_vectors.json`; the schema
 below describes one entry.
 
 ```json
@@ -135,7 +142,7 @@ python conformance/negative/selftest.py
 
 A suite that has only ever been run against an implementation which passes it has not been
 shown to discriminate, and a verifier that rejected every input would pass every must-reject
-vector ever written. `selftest.py` is the pairing: twenty-nine cases the suite must refuse,
+vector ever written. `selftest.py` is the pairing: thirty-one cases the suite must refuse,
 plus the one it must accept, so that a green run means the gate is live rather than absent.
 
 Three families. **Fake adapters** enforce nothing or satisfy the letter of the adapter
@@ -167,7 +174,7 @@ the normative text before it binds to CI, which is what #33 and #53 both asked f
 
 `ledger_id` is present on every vector and is **null**, deliberately. The normative-requirement ledger
 proposed in #33 does not exist yet, so there is no identifier to cite. The field is there so that the
-day the ledger lands, filling it is a mechanical pass and not a re-reading of nineteen vectors. An
+day the ledger lands, filling it is a mechanical pass and not a re-reading of twenty-one vectors. An
 identifier invented here would have looked like a binding and been a guess.
 
 ## What this corpus does not claim
