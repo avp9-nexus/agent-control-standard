@@ -44,14 +44,21 @@ is policy the enforcement point holds, so it lives in `state`, not in `authoriza
 read it from the authorization passed a stale decision declaring its own ten-year bound, and an adapter
 that skipped the check when the decision carried no timestamp passed a decision nobody could date. The
 first is refused as stale; the second is refused as unmeasurable, the same way an action is refused when
-the connected device was never read.
+the connected device was never read. The same holds for an approval: whether a grant is consumed, which
+session it belongs to, and which request presented it and is still awaiting its decision, is the enforcement
+point's record, so it lives in `state`; a request that declares its grant unconsumed, declares it to belong
+to the current session, or declares that the grant awaits its own decision, is refused when the record says
+otherwise. The authorization fields that make those declarations (`consumed`, `grant_session_id`,
+`awaiting_decision_for`) exist only to be refused: like `refers_to_request_id`, they are not proposed wire
+fields. A request's own `request_id` is its signed identity, unique in its session (sections 10 and 10.3): it
+says which request is being decided, and nothing about the grant.
 
 ## Failure codes (proposed enumeration)
 
 | Code | Verdict | Meaning |
 |---|---|---|
 | `CONTEXT_NOT_SUPPORTED` | REJECT | Signature valid, but the consulted state does not carry this action (wrong target, closed auction, exceeded bound) |
-| `REPLAY_CONSUMED` | REJECT | The authorization was already used once; one authorization covers one act |
+| `REPLAY_CONSUMED` | REJECT | Presented again: a one-time approval already consumed or still awaiting its decision for another request, or a grant bound to an earlier session; the request itself can be fresh and validly signed (section 9.3 as proposed in PR #294, not merged) |
 | `STALE_DECISION` | REJECT | The evidence is older than the freshness bound the enforcement point's policy sets |
 | `PRINCIPAL_MISMATCH` | REJECT | Approval bound to a different agent, tool, or signing device than the one acting |
 | `REFERENCE_MISSING` | REJECT | A required observability reference is present and unusable: zeroed, or bound to a different context |
@@ -61,7 +68,7 @@ the connected device was never read.
 
 ## Vector schema
 
-All twenty-one vectors live as a single array in `vectors/negative_vectors.json`; the schema
+All thirty-four vectors live as a single array in `vectors/negative_vectors.json`; the schema
 below describes one entry.
 
 ```json
@@ -142,8 +149,9 @@ python conformance/negative/selftest.py
 
 A suite that has only ever been run against an implementation which passes it has not been
 shown to discriminate, and a verifier that rejected every input would pass every must-reject
-vector ever written. `selftest.py` is the pairing: thirty-one cases the suite must refuse,
-plus the one it must accept, so that a green run means the gate is live rather than absent.
+vector ever written. `selftest.py` is the pairing: forty cases the suite must refuse,
+plus the reference adapter it must accept, checked twice (by its exit code and by its RESULT line),
+so that a green run means the gate is live rather than absent.
 
 Three families. **Fake adapters** enforce nothing or satisfy the letter of the adapter
 contract while defeating its purpose: one that would read the answer key, one that would look
@@ -153,8 +161,13 @@ must-pass inputs from a second path, one that names a function which exists nowh
 that return the right verdict with the wrong code or the wrong reason. **Runner guards** are
 inputs refused before any adapter is consulted: an empty suite, a suite whose positive
 controls have been removed, a vector stripped of its requirement, and a vector whose input was
-edited under its old name. **Adapter mutants** delete exactly one check from the reference
-adapter, one mutant per check, and the suite has to go red for every one.
+edited under its old name. **Adapter mutants** each break one check of the reference adapter by
+rewriting a single line: most delete it, the `trust_the_declared_*` ones make it read the evidence
+instead of the state, and five bend it, judging a grant other than the one named, narrowing it (to
+session-scoped grants, to a record that holds a grant, to the state's side of the session), or
+taking an unresolved grant as fresh. The suite has to go red for every one. One more case is a run
+whose positive controls and negative vectors resolve through different entry points: its RESULT
+line must say FAIL under a headline that still reads conform.
 
 The mutants are the part that finds vectors nobody wrote. A mutant that survives is not a
 tolerable gap: it names a rule the suite claims to enforce and does not exercise. Two came
@@ -169,12 +182,33 @@ changed count.
 ## What each vector binds to
 
 Every vector carries a `requirement` object: the spec version it was written against, the profile,
-the anchor in `docs/spec/conformance.md`, the clause, and the sentence it quotes. The corpus binds to
-the normative text before it binds to CI, which is what #33 and #53 both asked for.
+the anchor (in `docs/spec/conformance.md`, or for category 2 the section of
+`docs/spec/instrument/specification.md` that states the rule), the clause, and the sentence it
+quotes. The corpus binds to the normative text before it binds to CI, which is what #33 and #53
+both asked for.
+
+The sixteen category 2 vectors bind to section 9.3 as proposed in PR #294 at its head `bcaf92b`,
+which is not merged: their `spec_version` says so, and the day the section lands they are read again
+against the merged text. Until then the runner runs them like every other vector: a green run
+includes them, and a failure on one of them is a failure against the proposal, except for the four
+`UNMEASURABLE` ones, whose verdict comes from design rule 1 of this suite, not from section 9.3.
+Their profile stays ACS-Core: ASK is one of the four dispositions ACS-Core must support, section 9.3
+bounds what an approved ASK authorizes, and the ACS-Core list in `docs/spec/conformance.md` requires
+Guardians to reject replays per section 10.3, which at `bcaf92b` sends a replayed approval to
+section 9.3.
+
+ACS v0.1 has no request field that names a grant, as section 9.3 says (#175 proposes
+`ask_resolution.ask_request_id`). `refers_to_request_id` is this suite's name for that reference, not
+a proposed wire field. Category 2 judges an implementation that carries such a reference; to run the
+suite on one that does not, pass `--vectors` a copy of the file without category 2, so that the
+RESULT line keeps carrying the verdict. The vectors check a decision, not an emission: as the review
+of PR #294 on 2026-11-01 asks, nothing should emit `-32009` until the host adapter of the ACS
+reference implementation (`reference-implementations/agt/packages/host-adapter/src/failure-posture.ts`)
+counts it as a refusal.
 
 `ledger_id` is present on every vector and is **null**, deliberately. The normative-requirement ledger
 proposed in #33 does not exist yet, so there is no identifier to cite. The field is there so that the
-day the ledger lands, filling it is a mechanical pass and not a re-reading of twenty-one vectors. An
+day the ledger lands, filling it is a mechanical pass and not a re-reading of thirty-four vectors. An
 identifier invented here would have looked like a binding and been a guess.
 
 ## What this corpus does not claim
@@ -182,3 +216,15 @@ identifier invented here would have looked like a binding and been a guess.
 These vectors were written for this suite. They are not evidence about any deployment, and nothing
 here reports on a running system: the only thing measured in this directory is the suite's own
 behaviour against an adapter, which anyone can re-run with the two commands above.
+
+Category 2 covers the MUST on a presented approval, and declares what it leaves out rather than
+implying it. The half of section 9.3 that v0.1 can observe on the wire is a Guardian that keeps
+approvals and must not apply a consumed one-time approval or another session's grant to a later
+request: it evaluates that request as though the grant had never been made, which can raise a new
+ASK. That outcome depends on policy and on whether the action needs an approval, which no vector
+states, and ASK is not among this suite's verdicts. The record carries no action, so a repeat is not
+checked against the action the approval was given for. Only presentation by reference is modelled,
+not a request that carries the approver's decision. And no vector says that an action requires an
+approval: the suite tests that a presented grant is refused when it is consumed, in flight or bound
+to an earlier session, or not measured when the record cannot resolve it or does not give its
+session, not that one must be presented.

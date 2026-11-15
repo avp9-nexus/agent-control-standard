@@ -14,8 +14,9 @@ Three families, and the third is the one that finds vectors nobody wrote:
   RUNNER GUARDS      inputs the runner itself must refuse before any adapter is consulted:
                      an empty suite, a category with no positive control, a vector without
                      its requirement, and a vector whose id is not the digest of its input.
-  ADAPTER MUTANTS    each deletes exactly one check from the reference adapter. The suite
-                     has to go red for every one of them. A surviving mutant is not a
+  ADAPTER MUTANTS    each breaks one check of the reference adapter by rewriting a single
+                     line: most delete it, others make it read the evidence or bend it. The
+                     suite has to go red for every one of them. A surviving mutant is not a
                      tolerable gap - it is a vector nobody wrote, and it names which one.
 
 Every case declares the outcome it requires, so a case that starts passing for the wrong
@@ -160,7 +161,7 @@ RUNNER_GUARDS = {
     "input_edited_under_its_name": _suite_with_an_input_edited_under_its_name,
 }
 
-# Each mutant deletes ONE check from the reference adapter by rewriting a single line
+# Each mutant breaks ONE check of the reference adapter by rewriting a single line
 # of its source. The suite must go red for every one. The pattern is matched against
 # the file as shipped: a mutant that no longer applies is reported as such rather than
 # counted as killed, because a rule that silently stops being tested is worse than one
@@ -186,10 +187,49 @@ ADAPTER_MUTANTS = {
     "drop_wrong_device_check": (
         r'if derived != action\["required_signer"\]:', 'if False:'),
     "drop_replay_check": (
-        r'if auth\.get\("consumed"\):', 'if False:'),
+        r'if grant\.get\("consumed"\):', 'if False:'),
     "drop_session_binding_check": (
-        r'if auth\["session_secret"\] != f"SECRET_OF_SESSION_\{auth\[.current_session.\]\}":',
-        'if False:'),
+        r'if grant\.get\("session_id"\) != state\.get\("session_id"\):', 'if False:'),
+    # Whether a grant is consumed is the Guardian's record, never the request's: an adapter that lets the
+    # authorization say so honors every replay that declares it is not one.
+    "trust_the_declared_consumption": (
+        r'if grant\.get\("consumed"\):', 'if auth.get("consumed", grant.get("consumed")):'),
+    # A one-time approval presented by a second request while the first is still awaiting its decision is
+    # refused; an adapter without that check lets the second request through.
+    "drop_in_flight_check": (
+        r'if pending is not None and pending != auth\.get\("request_id"\):', 'if False:'),
+    # The grant that decides is the one the request names, not whichever the record holds first.
+    "judge_the_first_grant": (
+        r'grant = grants\.get\(grant_ref\) if isinstance\(grants, dict\) else None',
+        'grant = next(iter(grants.values()), None) if isinstance(grants, dict) else None'),
+    # Which session holds a grant is the Guardian's record, never the request's.
+    "trust_the_declared_session": (
+        r'if grant\.get\("session_id"\) != state\.get\("session_id"\):',
+        'if auth.get("grant_session_id", grant.get("session_id")) != state.get("session_id"):'),
+    # Every grant is session-bound, whatever its scope.
+    "bind_only_session_scoped_grants": (
+        r'if grant\.get\("session_id"\) != state\.get\("session_id"\):',
+        'if grant.get("scope") == "session" and grant.get("session_id") != state.get("session_id"):'),
+    # A presented grant the record cannot resolve is not measured; it is never taken as fresh.
+    "treat_an_unresolved_grant_as_fresh": (
+        r'return unmeasurable\("ORACLE_UNAVAILABLE", "the record holds no grant under this reference"\)',
+        'grant = {"session_id": state.get("session_id")}'),
+    # A session the record does not give, for the grant or for the state, is not measured: an absent
+    # session is neither a match nor a mismatch.
+    "treat_an_unknown_session_as_measured": (
+        r'if grant\.get\("session_id"\) is None or state\.get\("session_id"\) is None:', 'if False:'),
+    # The same check kept on the state's side only judges a grant that gives no session as another session's.
+    "check_only_the_state_session": (
+        r'if grant\.get\("session_id"\) is None or state\.get\("session_id"\) is None:',
+        'if state.get("session_id") is None:'),
+    # An empty record is not a fresh grant: skipping the check when the record holds nothing passes a
+    # grant presented at the start of a session.
+    "skip_the_check_on_an_empty_record": (
+        r'if grant_ref is not None:', 'if grant_ref is not None and state.get("grants"):'),
+    # Which request a grant awaits is the Guardian's record, never the request's.
+    "trust_the_declared_pending": (
+        r'pending = grant\.get\("awaiting_decision_for"\)',
+        'pending = auth.get("awaiting_decision_for", grant.get("awaiting_decision_for"))'),
     "drop_freshness_check": (
         r'if age > freshness_bound:', 'if False:'),
     # The bound that decides freshness is the policy's, never the evidence's: an adapter that lets the

@@ -68,12 +68,35 @@ def evaluate(vector):
         if derived != action["required_signer"]:
             return reject("PRINCIPAL_MISMATCH", "connected device derives a different key; wrong device")
 
-    # Replay.
-    if auth.get("consumed"):
-        return reject("REPLAY_CONSUMED", "this one-time authorization was already used")
-    if auth.get("session_secret") and auth.get("current_session"):
-        if auth["session_secret"] != f"SECRET_OF_SESSION_{auth['current_session']}":
-            return reject("REPLAY_CONSUMED", "secret belongs to a previous session")
+    # Approval lifetime: section 9.3 as proposed in PR #294 (not merged). A request that presents an
+    # approval names it by the request_id of the request whose ASK the grant answered: refers_to_request_id
+    # is this suite's name for a reference ACS v0.1 does not carry (#175 proposes one). Whether the grant is
+    # consumed, which session it belongs to, and which request presented it and is still awaiting its
+    # decision, is the Guardian's record, held in the state, never the evidence being judged (design rule 6).
+    # The record holds the grants the vectors present, consumed ones and earlier sessions' included, and
+    # marks consumption and the awaited decision only on a one-time approval, so scope is not read here.
+    # Section 9.3 does not rule on a reference the record does not resolve, or on a grant or a state that
+    # does not give its session: the suite cannot tell a grant never issued from a record that lost it,
+    # and refuses such a request as not measured rather than take the grant as fresh (design rule 1).
+    grant_ref = auth.get("refers_to_request_id")
+    if grant_ref is not None:
+        grants = state.get("grants")
+        grant = grants.get(grant_ref) if isinstance(grants, dict) else None
+        if grant is None:
+            return unmeasurable("ORACLE_UNAVAILABLE", "the record holds no grant under this reference")
+        if grant.get("session_id") is None or state.get("session_id") is None:
+            return unmeasurable("ORACLE_UNAVAILABLE", "the record does not tie the grant and the request to a session")
+        if grant.get("session_id") != state.get("session_id"):
+            return reject("REPLAY_CONSUMED", "the grant belongs to another session")
+        if grant.get("consumed"):
+            return reject("REPLAY_CONSUMED", "this one-time approval was already consumed")
+        # While the request that presented a one-time approval is still awaiting its decision, another
+        # request that presents it is refused, even before that decision returns. request_id is the
+        # request's own signed identity: a second arrival of the same request_id is a duplicate, refused
+        # under section 10.3 (REPLAY_DETECTED), which this suite does not model.
+        pending = grant.get("awaiting_decision_for")
+        if pending is not None and pending != auth.get("request_id"):
+            return reject("REPLAY_CONSUMED", "this one-time approval is awaiting its decision for another request")
 
     # Freshness. The bound that decides is policy the enforcement point holds, so it is read from the
     # state and never from the authorization being judged: a decision that declared its own bound would

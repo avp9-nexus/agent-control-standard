@@ -118,9 +118,9 @@
       }
     },
     {
-      "id": "346b52900129b6b85e6ec38f8709bc13ee871e5c12c5465776a0ac73a1d901cd",
+      "id": "779f32c02607dfe0e3909ac2717f875fd819f93ec98617997b06b0bf2d475225",
       "category": 2,
-      "description": "Replayed authorization: the same one-time approval presented for a second act. One authorization covers one act; the second presentation must fail even though every byte is valid.",
+      "description": "Consumed one-time approval presented again. A fresh request, validly signed under its own request_id, refers to the request whose ASK the grant answered; the Guardian's record says the grant was consumed once the decision for the approved repeat was returned. What is replayed is the authorization, not the request, so the request-level replay rule does not reach it.",
       "input": {
         "action": {
           "type": "commit_funds",
@@ -130,10 +130,18 @@
         "authorization": {
           "signature": "VALID",
           "signer": "agent-A",
-          "one_time_id": "auth-777",
-          "consumed": true
+          "request_id": "req-0003",
+          "refers_to_request_id": "req-0001"
         },
         "state": {
+          "session_id": "S-2",
+          "grants": {
+            "req-0001": {
+              "session_id": "S-2",
+              "scope": "this_request",
+              "consumed": true
+            }
+          },
           "auction-43": {
             "open": true,
             "settled": false
@@ -144,23 +152,23 @@
         "verdict": "REJECT",
         "code": "REPLAY_CONSUMED",
         "reason_must_mention": [
-          "already"
+          "consumed"
         ]
       },
       "positive_control": false,
       "requirement": {
-        "spec_version": "0.1.2",
+        "spec_version": "PENDING: merge of PR #294 (head bcaf92b)",
         "profile": "ACS-Core",
-        "anchor": "docs/spec/conformance.md#acs-core-mandatory-baseline",
-        "clause": "Replay protection",
-        "quote": "Guardians MUST reject replays per §10.3",
+        "anchor": "docs/spec/instrument/specification.md#93-approval-lifetime-normative",
+        "clause": "9.3 Approval lifetime",
+        "quote": "A Guardian MUST refuse, with `REPLAY_CONSUMED` (`-32009`, §17.1), a fresh signed request that presents a one-time approval already consumed, a one-time approval another request has presented and is still awaiting its decision, or a grant bound to an earlier session.",
         "ledger_id": null
       }
     },
     {
-      "id": "d36436a74f6b6553446e9b3d33c574224cf75af8f7888c26caec659242b06b8e",
+      "id": "ad8b9babc234b7eb344399a2bd5c142f4e9aa92d57b4f04baeb714adb8d9e08b",
       "category": 2,
-      "description": "Replay across sessions: an approval secret captured from a previous armed session, structurally valid, presented by a fresh confirmer. The session binding, not the secret's shape, is what must be checked.",
+      "description": "Grant bound to an earlier session. The request refers to a grant raised in session S-2 with session scope, and arrives in session S-3. Every grant belongs to the session of the ASK that raised it, so a session scope still ends with that session.",
       "input": {
         "action": {
           "type": "confirm_transaction",
@@ -168,13 +176,21 @@
         },
         "authorization": {
           "signature": "VALID",
-          "session_secret": "SECRET_OF_SESSION_N_MINUS_1",
-          "current_session": "N"
+          "signer": "agent-A",
+          "request_id": "req-0201",
+          "refers_to_request_id": "req-0101"
         },
         "state": {
+          "session_id": "S-3",
+          "grants": {
+            "req-0101": {
+              "session_id": "S-2",
+              "scope": "session",
+              "consumed": false
+            }
+          },
           "tx-pending-9": {
-            "awaiting_confirmation": true,
-            "session": "N"
+            "awaiting_confirmation": true
           }
         }
       },
@@ -187,11 +203,60 @@
       },
       "positive_control": false,
       "requirement": {
-        "spec_version": "0.1.2",
+        "spec_version": "PENDING: merge of PR #294 (head bcaf92b)",
         "profile": "ACS-Core",
-        "anchor": "docs/spec/conformance.md#acs-core-mandatory-baseline",
-        "clause": "Replay protection",
-        "quote": "Guardians MUST reject replays per §10.3",
+        "anchor": "docs/spec/instrument/specification.md#93-approval-lifetime-normative",
+        "clause": "9.3 Approval lifetime",
+        "quote": "A Guardian MUST refuse, with `REPLAY_CONSUMED` (`-32009`, §17.1), a fresh signed request that presents a one-time approval already consumed, a one-time approval another request has presented and is still awaiting its decision, or a grant bound to an earlier session.",
+        "ledger_id": null
+      }
+    },
+    {
+      "id": "980c9e958c022df5a2e71b70a45f980ee4ea414c5357b685110ee63bf93a058e",
+      "category": 2,
+      "description": "The request declares its own grant unconsumed. The Guardian's record says the grant was consumed. Whether a grant is consumed is decided by that record, never by the evidence being judged (design rule 6): a Guardian that took the request's word would honor every replay that says it is not one.",
+      "input": {
+        "action": {
+          "type": "commit_funds",
+          "target": "auction-43",
+          "amount": "1000"
+        },
+        "authorization": {
+          "signature": "VALID",
+          "signer": "agent-A",
+          "request_id": "req-0004",
+          "refers_to_request_id": "req-0001",
+          "consumed": false
+        },
+        "state": {
+          "session_id": "S-2",
+          "grants": {
+            "req-0001": {
+              "session_id": "S-2",
+              "scope": "this_request",
+              "consumed": true
+            }
+          },
+          "auction-43": {
+            "open": true,
+            "settled": false
+          }
+        }
+      },
+      "expected": {
+        "verdict": "REJECT",
+        "code": "REPLAY_CONSUMED",
+        "reason_must_mention": [
+          "consumed"
+        ]
+      },
+      "positive_control": false,
+      "requirement": {
+        "spec_version": "PENDING: merge of PR #294 (head bcaf92b)",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/instrument/specification.md#93-approval-lifetime-normative",
+        "clause": "9.3 Approval lifetime",
+        "quote": "A Guardian MUST refuse, with `REPLAY_CONSUMED` (`-32009`, §17.1), a fresh signed request that presents a one-time approval already consumed, a one-time approval another request has presented and is still awaiting its decision, or a grant bound to an earlier session.",
         "ledger_id": null
       }
     },
@@ -635,9 +700,9 @@
       }
     },
     {
-      "id": "ba4352287afce4c1507b58820c87684e59acba8871c7d49049be20c89ed171a5",
+      "id": "fe1194a65e955cb837a5a47055b2f185d195e32b092fe20aa351f63a4d0d97a4",
       "category": 2,
-      "description": "POSITIVE CONTROL. Same shape as the consumed-authorization vector but the one-time authorization is unconsumed. MUST pass.",
+      "description": "POSITIVE CONTROL. The approved repeat: a new request in the grant's own session refers to the request whose ASK the grant answered, and the Guardian's record shows the grant not yet consumed. MUST pass. Identical to 779f32c0 except for that record and the request_id. The record shows no in-flight mark; 1f854509 is the same decision with the mark the Guardian may write when req-0002 arrives, and both must pass.",
       "input": {
         "action": {
           "type": "commit_funds",
@@ -647,10 +712,18 @@
         "authorization": {
           "signature": "VALID",
           "signer": "agent-A",
-          "one_time_id": "auth-778",
-          "consumed": false
+          "request_id": "req-0002",
+          "refers_to_request_id": "req-0001"
         },
         "state": {
+          "session_id": "S-2",
+          "grants": {
+            "req-0001": {
+              "session_id": "S-2",
+              "scope": "this_request",
+              "consumed": false
+            }
+          },
           "auction-43": {
             "open": true,
             "settled": false
@@ -662,11 +735,580 @@
       },
       "positive_control": true,
       "requirement": {
-        "spec_version": "0.1.2",
+        "spec_version": "PENDING: merge of PR #294 (head bcaf92b)",
         "profile": "ACS-Core",
-        "anchor": "docs/spec/conformance.md#acs-core-mandatory-baseline",
-        "clause": "Replay protection",
-        "quote": "Guardians MUST reject replays per §10.3",
+        "anchor": "docs/spec/instrument/specification.md#93-approval-lifetime-normative",
+        "clause": "9.3 Approval lifetime",
+        "quote": "A **one-time approval** is a grant with no `intent_extension`, or with an `intent_extension` whose `scope` is `this_request`. It authorizes one request: a new request that repeats the action the original ASK was raised for and refers to the original request's `request_id`.",
+        "ledger_id": null
+      }
+    },
+    {
+      "id": "7e4a044d1870d0c83a283706862aa7d1db850d157a7c912f2753f39727ab27c3",
+      "category": 2,
+      "description": "One-time approval still awaiting its decision for another request. Request req-0002 presented the grant and its decision has not returned; a different fresh request, validly signed under its own request_id, presents the same grant. A one-time approval authorizes one request, so the second is refused even before the first decision returns.",
+      "input": {
+        "action": {
+          "type": "commit_funds",
+          "target": "auction-43",
+          "amount": "1000"
+        },
+        "authorization": {
+          "signature": "VALID",
+          "signer": "agent-A",
+          "request_id": "req-0005",
+          "refers_to_request_id": "req-0001"
+        },
+        "state": {
+          "session_id": "S-2",
+          "grants": {
+            "req-0001": {
+              "session_id": "S-2",
+              "scope": "this_request",
+              "consumed": false,
+              "awaiting_decision_for": "req-0002"
+            }
+          },
+          "auction-43": {
+            "open": true,
+            "settled": false
+          }
+        }
+      },
+      "expected": {
+        "verdict": "REJECT",
+        "code": "REPLAY_CONSUMED",
+        "reason_must_mention": [
+          "awaiting"
+        ]
+      },
+      "positive_control": false,
+      "requirement": {
+        "spec_version": "PENDING: merge of PR #294 (head bcaf92b)",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/instrument/specification.md#93-approval-lifetime-normative",
+        "clause": "9.3 Approval lifetime",
+        "quote": "A Guardian MUST refuse, with `REPLAY_CONSUMED` (`-32009`, §17.1), a fresh signed request that presents a one-time approval already consumed, a one-time approval another request has presented and is still awaiting its decision, or a grant bound to an earlier session.",
+        "ledger_id": null
+      }
+    },
+    {
+      "id": "1f85450983f561d330ec414dad91f95840a6b0b8a073766e9f0ae43aecc157f2",
+      "category": 2,
+      "description": "POSITIVE CONTROL. The request that presented the grant and is awaiting its decision is req-0002 itself, and this is its evaluation, with the mark the Guardian wrote when it arrived. MUST pass. A second arrival of req-0002 would be a duplicate request_id, refused under section 10.3 (REPLAY_DETECTED), which this suite does not model. Identical to 7e4a044d except for the request_id.",
+      "input": {
+        "action": {
+          "type": "commit_funds",
+          "target": "auction-43",
+          "amount": "1000"
+        },
+        "authorization": {
+          "signature": "VALID",
+          "signer": "agent-A",
+          "request_id": "req-0002",
+          "refers_to_request_id": "req-0001"
+        },
+        "state": {
+          "session_id": "S-2",
+          "grants": {
+            "req-0001": {
+              "session_id": "S-2",
+              "scope": "this_request",
+              "consumed": false,
+              "awaiting_decision_for": "req-0002"
+            }
+          },
+          "auction-43": {
+            "open": true,
+            "settled": false
+          }
+        }
+      },
+      "expected": {
+        "verdict": "PASS"
+      },
+      "positive_control": true,
+      "requirement": {
+        "spec_version": "PENDING: merge of PR #294 (head bcaf92b)",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/instrument/specification.md#93-approval-lifetime-normative",
+        "clause": "9.3 Approval lifetime",
+        "quote": "A **one-time approval** is a grant with no `intent_extension`, or with an `intent_extension` whose `scope` is `this_request`. It authorizes one request: a new request that repeats the action the original ASK was raised for and refers to the original request's `request_id`.",
+        "ledger_id": null
+      }
+    },
+    {
+      "id": "ed5adf82e617c3abe21e75ed4999e2e321083785c4b7bc51ed0c7bc5bfcce0a8",
+      "category": 2,
+      "description": "Two grants in the record; the request refers to the consumed one. The grant that decides is the one the request names: with 47468d94, the pair catches an adapter that judges whichever grant it reads first, in either order.",
+      "input": {
+        "action": {
+          "type": "commit_funds",
+          "target": "auction-43",
+          "amount": "1000"
+        },
+        "authorization": {
+          "signature": "VALID",
+          "signer": "agent-A",
+          "request_id": "req-0008",
+          "refers_to_request_id": "req-0001"
+        },
+        "state": {
+          "session_id": "S-2",
+          "grants": {
+            "req-0007": {
+              "session_id": "S-2",
+              "scope": "this_request",
+              "consumed": false
+            },
+            "req-0001": {
+              "session_id": "S-2",
+              "scope": "this_request",
+              "consumed": true
+            }
+          },
+          "auction-43": {
+            "open": true,
+            "settled": false
+          }
+        }
+      },
+      "expected": {
+        "verdict": "REJECT",
+        "code": "REPLAY_CONSUMED",
+        "reason_must_mention": [
+          "consumed"
+        ]
+      },
+      "positive_control": false,
+      "requirement": {
+        "spec_version": "PENDING: merge of PR #294 (head bcaf92b)",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/instrument/specification.md#93-approval-lifetime-normative",
+        "clause": "9.3 Approval lifetime",
+        "quote": "A Guardian MUST refuse, with `REPLAY_CONSUMED` (`-32009`, §17.1), a fresh signed request that presents a one-time approval already consumed, a one-time approval another request has presented and is still awaiting its decision, or a grant bound to an earlier session.",
+        "ledger_id": null
+      }
+    },
+    {
+      "id": "47468d94c7e811301454a3690efbfe3a623219ab6c5bda16c733b0a14b60c824",
+      "category": 2,
+      "description": "POSITIVE CONTROL. Same record; the request refers to the fresh grant req-0007. MUST pass. Identical to ed5adf82 except for refers_to_request_id.",
+      "input": {
+        "action": {
+          "type": "commit_funds",
+          "target": "auction-43",
+          "amount": "1000"
+        },
+        "authorization": {
+          "signature": "VALID",
+          "signer": "agent-A",
+          "request_id": "req-0008",
+          "refers_to_request_id": "req-0007"
+        },
+        "state": {
+          "session_id": "S-2",
+          "grants": {
+            "req-0007": {
+              "session_id": "S-2",
+              "scope": "this_request",
+              "consumed": false
+            },
+            "req-0001": {
+              "session_id": "S-2",
+              "scope": "this_request",
+              "consumed": true
+            }
+          },
+          "auction-43": {
+            "open": true,
+            "settled": false
+          }
+        }
+      },
+      "expected": {
+        "verdict": "PASS"
+      },
+      "positive_control": true,
+      "requirement": {
+        "spec_version": "PENDING: merge of PR #294 (head bcaf92b)",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/instrument/specification.md#93-approval-lifetime-normative",
+        "clause": "9.3 Approval lifetime",
+        "quote": "A **one-time approval** is a grant with no `intent_extension`, or with an `intent_extension` whose `scope` is `this_request`. It authorizes one request: a new request that repeats the action the original ASK was raised for and refers to the original request's `request_id`.",
+        "ledger_id": null
+      }
+    },
+    {
+      "id": "b418f674803ae95ecfceb7b1370bb43919f64885eff6721c98e50e8de67692d2",
+      "category": 2,
+      "description": "POSITIVE CONTROL. The session-scope grant is presented in its own session S-2. MUST pass: a grant whose scope is session authorizes the rest of that session. Identical to ad8b9bab except for the state's session_id.",
+      "input": {
+        "action": {
+          "type": "confirm_transaction",
+          "target": "tx-pending-9"
+        },
+        "authorization": {
+          "signature": "VALID",
+          "signer": "agent-A",
+          "request_id": "req-0201",
+          "refers_to_request_id": "req-0101"
+        },
+        "state": {
+          "session_id": "S-2",
+          "grants": {
+            "req-0101": {
+              "session_id": "S-2",
+              "scope": "session",
+              "consumed": false
+            }
+          },
+          "tx-pending-9": {
+            "awaiting_confirmation": true
+          }
+        }
+      },
+      "expected": {
+        "verdict": "PASS"
+      },
+      "positive_control": true,
+      "requirement": {
+        "spec_version": "PENDING: merge of PR #294 (head bcaf92b)",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/instrument/specification.md#93-approval-lifetime-normative",
+        "clause": "9.3 Approval lifetime",
+        "quote": "An approver's grant authorizes what the ASK that requested it covered, in the session that raised it, and nothing after that.",
+        "ledger_id": null
+      }
+    },
+    {
+      "id": "59ad3d259f84509b1ac4fb8ea2b2eaee296ca33ed75c79fdd45c3f3e36073d1c",
+      "category": 2,
+      "description": "One-time approval from an earlier session. The grant was raised in S-2 with no session scope, never consumed, and is presented in S-3. Every grant is session-bound, whatever its scope.",
+      "input": {
+        "action": {
+          "type": "commit_funds",
+          "target": "auction-43",
+          "amount": "1000"
+        },
+        "authorization": {
+          "signature": "VALID",
+          "signer": "agent-A",
+          "request_id": "req-0202",
+          "refers_to_request_id": "req-0102"
+        },
+        "state": {
+          "session_id": "S-3",
+          "grants": {
+            "req-0102": {
+              "session_id": "S-2",
+              "scope": "this_request",
+              "consumed": false
+            }
+          },
+          "auction-43": {
+            "open": true,
+            "settled": false
+          }
+        }
+      },
+      "expected": {
+        "verdict": "REJECT",
+        "code": "REPLAY_CONSUMED",
+        "reason_must_mention": [
+          "session"
+        ]
+      },
+      "positive_control": false,
+      "requirement": {
+        "spec_version": "PENDING: merge of PR #294 (head bcaf92b)",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/instrument/specification.md#93-approval-lifetime-normative",
+        "clause": "9.3 Approval lifetime",
+        "quote": "A Guardian MUST refuse, with `REPLAY_CONSUMED` (`-32009`, §17.1), a fresh signed request that presents a one-time approval already consumed, a one-time approval another request has presented and is still awaiting its decision, or a grant bound to an earlier session.",
+        "ledger_id": null
+      }
+    },
+    {
+      "id": "a6a2db41f45503ee350bb5951adfaedece1bce10107f6ff655e277926c85377b",
+      "category": 2,
+      "description": "The request declares its grant to belong to the current session S-3; the Guardian's record says S-2. Which session holds a grant is decided by that record, never by the evidence being judged (design rule 6).",
+      "input": {
+        "action": {
+          "type": "commit_funds",
+          "target": "auction-43",
+          "amount": "1000"
+        },
+        "authorization": {
+          "signature": "VALID",
+          "signer": "agent-A",
+          "request_id": "req-0203",
+          "refers_to_request_id": "req-0102",
+          "grant_session_id": "S-3"
+        },
+        "state": {
+          "session_id": "S-3",
+          "grants": {
+            "req-0102": {
+              "session_id": "S-2",
+              "scope": "this_request",
+              "consumed": false
+            }
+          },
+          "auction-43": {
+            "open": true,
+            "settled": false
+          }
+        }
+      },
+      "expected": {
+        "verdict": "REJECT",
+        "code": "REPLAY_CONSUMED",
+        "reason_must_mention": [
+          "session"
+        ]
+      },
+      "positive_control": false,
+      "requirement": {
+        "spec_version": "PENDING: merge of PR #294 (head bcaf92b)",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/instrument/specification.md#93-approval-lifetime-normative",
+        "clause": "9.3 Approval lifetime",
+        "quote": "A Guardian MUST refuse, with `REPLAY_CONSUMED` (`-32009`, §17.1), a fresh signed request that presents a one-time approval already consumed, a one-time approval another request has presented and is still awaiting its decision, or a grant bound to an earlier session.",
+        "ledger_id": null
+      }
+    },
+    {
+      "id": "66c7e4de34972af67d7a7515ec97980e29e0901ef487743b6addcfc1b57a2389",
+      "category": 2,
+      "description": "The request refers to a grant the Guardian's record does not resolve. Nothing in the record says what the reference names: a grant never issued, or one the record no longer holds. Section 9.3 does not rule on such a reference; the expected verdict is this suite's design rule 1: absence of a measurement is never a pass.",
+      "input": {
+        "action": {
+          "type": "commit_funds",
+          "target": "auction-43",
+          "amount": "1000"
+        },
+        "authorization": {
+          "signature": "VALID",
+          "signer": "agent-A",
+          "request_id": "req-0009",
+          "refers_to_request_id": "req-0099"
+        },
+        "state": {
+          "session_id": "S-2",
+          "grants": {
+            "req-0001": {
+              "session_id": "S-2",
+              "scope": "this_request",
+              "consumed": false
+            }
+          },
+          "auction-43": {
+            "open": true,
+            "settled": false
+          }
+        }
+      },
+      "expected": {
+        "verdict": "UNMEASURABLE",
+        "code": "ORACLE_UNAVAILABLE",
+        "reason_must_mention": [
+          "no grant"
+        ]
+      },
+      "positive_control": false,
+      "requirement": {
+        "spec_version": "PENDING: merge of PR #294 (head bcaf92b)",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/instrument/specification.md#93-approval-lifetime-normative",
+        "clause": "9.3 Approval lifetime",
+        "quote": "A Guardian MUST refuse, with `REPLAY_CONSUMED` (`-32009`, §17.1), a fresh signed request that presents a one-time approval already consumed, a one-time approval another request has presented and is still awaiting its decision, or a grant bound to an earlier session.",
+        "ledger_id": null
+      }
+    },
+    {
+      "id": "5d2c7f4228e98374814f3a73e3f8b886d3f9a2ab53c9e37b34a81f2e9aab3d0e",
+      "category": 2,
+      "description": "The state does not say which session is current, so whether the grant belongs to it cannot be measured; an absent session never matches. Section 9.3 does not rule on a record that has lost the current session; the expected verdict is this suite's design rule 1.",
+      "input": {
+        "action": {
+          "type": "commit_funds",
+          "target": "auction-43",
+          "amount": "1000"
+        },
+        "authorization": {
+          "signature": "VALID",
+          "signer": "agent-A",
+          "request_id": "req-0010",
+          "refers_to_request_id": "req-0001"
+        },
+        "state": {
+          "grants": {
+            "req-0001": {
+              "session_id": "S-2",
+              "scope": "this_request",
+              "consumed": false
+            }
+          },
+          "auction-43": {
+            "open": true,
+            "settled": false
+          }
+        }
+      },
+      "expected": {
+        "verdict": "UNMEASURABLE",
+        "code": "ORACLE_UNAVAILABLE",
+        "reason_must_mention": [
+          "session"
+        ]
+      },
+      "positive_control": false,
+      "requirement": {
+        "spec_version": "PENDING: merge of PR #294 (head bcaf92b)",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/instrument/specification.md#93-approval-lifetime-normative",
+        "clause": "9.3 Approval lifetime",
+        "quote": "A Guardian MUST refuse, with `REPLAY_CONSUMED` (`-32009`, §17.1), a fresh signed request that presents a one-time approval already consumed, a one-time approval another request has presented and is still awaiting its decision, or a grant bound to an earlier session.",
+        "ledger_id": null
+      }
+    },
+    {
+      "id": "809e7d96c684425be44b6bef7deccf3ea94f5ce3493ad7391c465c8b9e85e202",
+      "category": 2,
+      "description": "The request declares that the one-time approval awaits its own decision; the Guardian's record says it awaits req-0002. Which request a grant awaits is decided by that record, never by the evidence being judged (design rule 6). Identical to 7e4a044d except for that declaration.",
+      "input": {
+        "action": {
+          "type": "commit_funds",
+          "target": "auction-43",
+          "amount": "1000"
+        },
+        "authorization": {
+          "signature": "VALID",
+          "signer": "agent-A",
+          "request_id": "req-0005",
+          "refers_to_request_id": "req-0001",
+          "awaiting_decision_for": "req-0005"
+        },
+        "state": {
+          "session_id": "S-2",
+          "grants": {
+            "req-0001": {
+              "session_id": "S-2",
+              "scope": "this_request",
+              "consumed": false,
+              "awaiting_decision_for": "req-0002"
+            }
+          },
+          "auction-43": {
+            "open": true,
+            "settled": false
+          }
+        }
+      },
+      "expected": {
+        "verdict": "REJECT",
+        "code": "REPLAY_CONSUMED",
+        "reason_must_mention": [
+          "awaiting"
+        ]
+      },
+      "positive_control": false,
+      "requirement": {
+        "spec_version": "PENDING: merge of PR #294 (head bcaf92b)",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/instrument/specification.md#93-approval-lifetime-normative",
+        "clause": "9.3 Approval lifetime",
+        "quote": "A Guardian MUST refuse, with `REPLAY_CONSUMED` (`-32009`, §17.1), a fresh signed request that presents a one-time approval already consumed, a one-time approval another request has presented and is still awaiting its decision, or a grant bound to an earlier session.",
+        "ledger_id": null
+      }
+    },
+    {
+      "id": "924abf0e833516746a7c484e7f834fbe931692061f22eaa9dfee978ef85b5f5d",
+      "category": 2,
+      "description": "The request refers to a grant, and the Guardian's record holds no grant at all, as at the start of a session. An empty record is not a fresh grant: section 9.3 does not rule on such a reference, and the expected verdict is this suite's design rule 1: absence of a measurement is never a pass.",
+      "input": {
+        "action": {
+          "type": "commit_funds",
+          "target": "auction-43",
+          "amount": "1000"
+        },
+        "authorization": {
+          "signature": "VALID",
+          "signer": "agent-A",
+          "request_id": "req-0011",
+          "refers_to_request_id": "req-0001"
+        },
+        "state": {
+          "session_id": "S-2",
+          "grants": {},
+          "auction-43": {
+            "open": true,
+            "settled": false
+          }
+        }
+      },
+      "expected": {
+        "verdict": "UNMEASURABLE",
+        "code": "ORACLE_UNAVAILABLE",
+        "reason_must_mention": [
+          "no grant"
+        ]
+      },
+      "positive_control": false,
+      "requirement": {
+        "spec_version": "PENDING: merge of PR #294 (head bcaf92b)",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/instrument/specification.md#93-approval-lifetime-normative",
+        "clause": "9.3 Approval lifetime",
+        "quote": "A Guardian MUST refuse, with `REPLAY_CONSUMED` (`-32009`, §17.1), a fresh signed request that presents a one-time approval already consumed, a one-time approval another request has presented and is still awaiting its decision, or a grant bound to an earlier session.",
+        "ledger_id": null
+      }
+    },
+    {
+      "id": "85492f8d1b439815b9359d94a248adcfff15922f700389c9a2770f11c7dead54",
+      "category": 2,
+      "description": "The Guardian's record holds the grant but not the session it belongs to, so whether it belongs to the current session S-2 cannot be measured; an absent session never matches. Section 9.3 does not rule on this case; the expected verdict is this suite's design rule 1.",
+      "input": {
+        "action": {
+          "type": "commit_funds",
+          "target": "auction-43",
+          "amount": "1000"
+        },
+        "authorization": {
+          "signature": "VALID",
+          "signer": "agent-A",
+          "request_id": "req-0012",
+          "refers_to_request_id": "req-0001"
+        },
+        "state": {
+          "session_id": "S-2",
+          "grants": {
+            "req-0001": {
+              "scope": "this_request",
+              "consumed": false
+            }
+          },
+          "auction-43": {
+            "open": true,
+            "settled": false
+          }
+        }
+      },
+      "expected": {
+        "verdict": "UNMEASURABLE",
+        "code": "ORACLE_UNAVAILABLE",
+        "reason_must_mention": [
+          "session"
+        ]
+      },
+      "positive_control": false,
+      "requirement": {
+        "spec_version": "PENDING: merge of PR #294 (head bcaf92b)",
+        "profile": "ACS-Core",
+        "anchor": "docs/spec/instrument/specification.md#93-approval-lifetime-normative",
+        "clause": "9.3 Approval lifetime",
+        "quote": "A Guardian MUST refuse, with `REPLAY_CONSUMED` (`-32009`, §17.1), a fresh signed request that presents a one-time approval already consumed, a one-time approval another request has presented and is still awaiting its decision, or a grant bound to an earlier session.",
         "ledger_id": null
       }
     },
